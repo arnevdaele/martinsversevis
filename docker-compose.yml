@@ -36,6 +36,8 @@ x-app: &app
     MAIL_PASSWORD: ${MAIL_PASSWORD}
     MAIL_FROM_ADDRESS: "${MAIL_FROM_ADDRESS:?Set MAIL_FROM_ADDRESS}"
     MAIL_FROM_NAME: "Martins Verse Vis"
+    # Where customers' replies go, when the sending mailbox isn't the client's own.
+    MAIL_CUSTOMER_REPLY_TO: ${MAIL_CUSTOMER_REPLY_TO:-}
   volumes:
     # Product photos and other uploads survive a redeploy.
     - storage:/var/www/html/storage/app

@@ -24,7 +24,13 @@ class CustomerResetPassword extends Notification implements ShouldQueue
     {
         $url = route('portal.password.reset', ['token' => $this->token, 'email' => $notifiable->email]);
 
-        return (new MailMessage)
+        $message = new MailMessage;
+
+        if (filled($replyTo = config('mail.customer_reply_to.address'))) {
+            $message->replyTo($replyTo, config('mail.customer_reply_to.name'));
+        }
+
+        return $message
             ->subject(__('portal.mail.reset.subject'))
             ->greeting(__('portal.mail.greeting', ['name' => $notifiable->name]))
             ->line(__('portal.mail.reset.intro'))

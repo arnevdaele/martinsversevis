@@ -136,6 +136,20 @@ class LocalisationTest extends TestCase
         });
     }
 
+    public function test_customer_mails_reply_to_the_client_and_staff_mails_to_the_customer(): void
+    {
+        config(['mail.customer_reply_to.address' => 'info@martinsversevis.test']);
+        $user = CustomerUser::factory()->create();
+        $order = Order::create(['number' => '2026-000001', 'customer_id' => $user->customer_id, 'customer_user_id' => $user->id]);
+
+        $this->assertTrue((new OrderConfirmation($order))->hasReplyTo('info@martinsversevis.test'));
+        $this->assertTrue((new OrderReceived($order))->hasReplyTo($user->email));
+        $this->assertSame('info@martinsversevis.test', (new CustomerInvitation('x'))->toMail($user)->replyTo[0][0]);
+
+        config(['mail.customer_reply_to.address' => null]);
+        $this->assertFalse((new OrderConfirmation($order))->hasReplyTo('info@martinsversevis.test'));
+    }
+
     public function test_every_outgoing_mail_goes_through_the_quota(): void
     {
         foreach ([

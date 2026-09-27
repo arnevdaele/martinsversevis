@@ -24,6 +24,16 @@ return [
     'hourly_limit' => env('MAIL_HOURLY_LIMIT', 150),
 
     /*
+    | Where customers' replies go (order confirmations, invitations, password
+    | mails) when the sending mailbox belongs to someone else, e.g. the agency's
+    | hello@ address. Staff notifications reply to the ordering customer instead.
+    */
+    'customer_reply_to' => [
+        'address' => env('MAIL_CUSTOMER_REPLY_TO'),
+        'name' => env('MAIL_FROM_NAME', 'Martins Verse Vis'),
+    ],
+
+    /*
     |--------------------------------------------------------------------------
     | Mailer Configurations
     |--------------------------------------------------------------------------

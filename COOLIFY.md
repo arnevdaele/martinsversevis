@@ -30,6 +30,7 @@ Fill in the rest:
 | `MAIL_USERNAME` | The full OVH mailbox address, e.g. `bestellingen@martinsversevis.be`. |
 | `MAIL_PASSWORD` | That mailbox's password. |
 | `MAIL_FROM_ADDRESS` | **The same address as `MAIL_USERNAME`.** OVH only lets a mailbox send as itself. |
+| `MAIL_CUSTOMER_REPLY_TO` | Optional. Where customers' replies to confirmations and invitations go, e.g. the client's own `info@martinsversevis.be`. Needed when the sending mailbox isn't the client's. |
 
 The mail server settings default to OVH (Zimbra and MX Plan use the same ones):
 `MAIL_HOST=smtp.mail.ovh.net`, `MAIL_PORT=465`, `MAIL_SCHEME=smtps`. Only set

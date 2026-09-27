@@ -7,6 +7,7 @@ use App\Models\Order;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Mail\Mailable;
+use Illuminate\Mail\Mailables\Address;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
@@ -20,7 +21,12 @@ class OrderConfirmation extends Mailable implements ShouldQueue
 
     public function envelope(): Envelope
     {
-        return new Envelope(subject: __('orders.mail.confirmation.subject', ['number' => $this->order->number]));
+        $replyTo = config('mail.customer_reply_to');
+
+        return new Envelope(
+            subject: __('orders.mail.confirmation.subject', ['number' => $this->order->number]),
+            replyTo: filled($replyTo['address']) ? [new Address($replyTo['address'], $replyTo['name'])] : [],
+        );
     }
 
     public function content(): Content
