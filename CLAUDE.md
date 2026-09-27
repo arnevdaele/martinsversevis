@@ -66,6 +66,12 @@ policy. The role and user forms are generated from that list (`PermissionMatrix`
 
 - The catalogue (`Product`) is shared; prices live on `PriceListItem`. A null
   price is a *dagprijs*: orderable, priced by staff afterwards.
+- Prices are edited per product across all lists at once: the **Prijzen** page
+  (`App\Filament\Pages\Prices`, a grid of products × lists) and the Prijzen
+  block in the product form. Both go through `PriceGrid::set()`, where a cell
+  is `""` (not in the list), a price, or `"d"` (day price). "Prijzen overnemen"
+  (`PriceGrid::copy`) fills one list from another with a markup, rounded up.
+  The per-list items screen stays for minimum quantities, notes and order.
 - A customer sees lists linked to their type plus lists granted to them
   directly, filtered by `PriceList::currentlyValid()`. `Customer::visiblePriceLists()`
   is the only definition of that — use it, don't re-derive it.
