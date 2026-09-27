@@ -9,18 +9,20 @@ use App\Filament\Support\Translations;
 use App\Models\PriceList;
 use App\Models\PriceListItem;
 use App\Models\Product;
+use App\Support\ListPrices;
 use App\Support\Money;
-use App\Support\PriceGrid;
 use BackedEnum;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
+use Filament\Forms\Components\Checkbox;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
+use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Utilities\Set;
@@ -33,6 +35,7 @@ use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Filters\TernaryFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use UnitEnum;
@@ -131,40 +134,61 @@ class ProductResource extends Resource
     }
 
     /**
-     * One field per price list, typed like a cell in the Prijzen grid, so a
-     * new product gets all its prices in the same step it is created.
+     * The general lists (not the ones made for a single customer), each with
+     * a price and a day-price box, so a new product is priced everywhere in
+     * the same step it is created.
+     *
+     * @return Collection<int, PriceList>
      */
+    public static function generalLists()
+    {
+        return PriceList::query()
+            ->where(fn (Builder $query) => $query->whereHas('customerTypes')->orWhereDoesntHave('customers'))
+            ->with('customerTypes')
+            ->orderByDesc('is_active')
+            ->orderBy('name')
+            ->get();
+    }
+
     public static function pricesSection(): Section
     {
-        $fields = PriceList::query()->with('customerTypes')->orderByDesc('is_active')->orderBy('name')->get()
-            ->map(fn (PriceList $list) => TextInput::make("prices.{$list->id}")
+        $rows = self::generalLists()->map(fn (PriceList $list) => Grid::make(3)->schema([
+            TextInput::make("prices.{$list->id}.price")
                 ->label($list->name.($list->is_active ? '' : ' (inactief)'))
                 ->helperText($list->customerTypes->isEmpty() ? 'Aan geen klanttype gekoppeld' : 'Voor: '.$list->customerTypes->pluck('name')->implode(', '))
                 ->placeholder('niet in deze lijst')
                 ->prefix('€')
                 ->inputMode('decimal')
-                ->rule(PriceGrid::RULE)
-                ->validationMessages(['regex' => 'Typ een bedrag (bv. 24,50), "d" voor dagprijs, of laat leeg.']))
-            ->all();
+                ->rule('regex:/^\s*\d{1,6}([.,]\d{1,2})?\s*$/')
+                ->validationMessages(['regex' => 'Typ een bedrag, bv. 24,50.'])
+                ->disabled(fn (Get $get) => (bool) $get("prices.{$list->id}.day"))
+                ->columnSpan(2),
+            Checkbox::make("prices.{$list->id}.day")
+                ->label('Dagprijs')
+                ->live()
+                ->extraFieldWrapperAttributes(['style' => 'margin-top: 2rem']),
+        ]))->all();
 
         return Section::make('Prijzen')
-            ->description('Excl. btw. Leeg = niet in die lijst, "d" = dagprijs. Alle prijzen tegelijk bekijken kan onder Catalogus → Prijzen.')
+            ->description('Excl. btw. Leeg = niet in die lijst. Vink "Dagprijs" aan als de prijs pas bij levering vastligt.')
             ->icon('heroicon-o-currency-euro')
-            ->columns(2)
             ->columnSpanFull()
-            ->visible(fn () => auth()->user()->can('price-lists.update') && $fields !== [])
-            ->schema($fields);
+            ->visible(fn () => auth()->user()->can('price-lists.update') && $rows !== [])
+            ->schema($rows);
     }
 
-    /** @return array<int, string> price list id => cell value */
+    /** @return array<int, array{price: ?string, day: bool}> */
     public static function pricesFormState(Product $product): array
     {
         return $product->priceListItems()->get()
-            ->mapWithKeys(fn (PriceListItem $item) => [$item->price_list_id => PriceGrid::display($item)])
+            ->mapWithKeys(fn (PriceListItem $item) => [$item->price_list_id => [
+                'price' => $item->price === null ? null : number_format((float) $item->price, 2, ',', ''),
+                'day' => $item->price === null,
+            ]])
             ->all();
     }
 
-    /** Save the product and, if the user may, its prices — shared by create and edit. */
+    /** Save the product and, if the user may, its prices in the general lists. */
     public static function saveWithPrices(Product $product, array $data): Product
     {
         $prices = $data['prices'] ?? null;
@@ -174,8 +198,9 @@ class ProductResource extends Resource
             $product->fill($data)->save();
 
             if (is_array($prices) && auth()->user()->can('price-lists.update')) {
-                foreach (PriceList::whereIn('id', array_keys($prices))->get() as $list) {
-                    PriceGrid::set($product, $list, $prices[$list->id]);
+                foreach (self::generalLists() as $list) {
+                    $row = $prices[$list->id] ?? [];
+                    ListPrices::set($product, $list, ListPrices::parse($row['price'] ?? null), (bool) ($row['day'] ?? false));
                 }
             }
         });

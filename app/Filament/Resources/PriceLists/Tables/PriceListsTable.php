@@ -2,30 +2,35 @@
 
 namespace App\Filament\Resources\PriceLists\Tables;
 
+use App\Filament\Resources\PriceLists\PriceListResource;
 use App\Models\PriceList;
 use Filament\Actions\Action;
 use Filament\Actions\DeleteAction;
-use Filament\Actions\EditAction;
-use Filament\Forms\Components\TextInput;
-use Filament\Notifications\Notification;
-use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Support\Facades\DB;
 
 class PriceListsTable
 {
     public static function configure(Table $table): Table
     {
         return $table
-            ->modifyQueryUsing(fn (Builder $query) => $query->withCount(['items', 'customers'])->with('customerTypes'))
+            ->modifyQueryUsing(fn (Builder $query) => $query->withCount('items')->with(['customerTypes', 'customers']))
             ->defaultSort('name')
+            // A click on a list opens its prices; settings are the second tab there.
+            ->recordUrl(fn (PriceList $record) => PriceListResource::getUrl('prices', ['record' => $record]))
             ->columns([
                 TextColumn::make('name')->label('Prijslijst')->description(fn (PriceList $record) => $record->description)->searchable()->weight('medium'),
-                TextColumn::make('customerTypes.name')->label('Klanttypes')->badge()->color('gray')->placeholder('Geen'),
-                TextColumn::make('customers_count')->label('Extra klanten')->alignCenter()->toggleable(),
+                TextColumn::make('audience')
+                    ->label('Voor')
+                    ->state(fn (PriceList $record) => [
+                        ...$record->customerTypes->pluck('name')->all(),
+                        ...$record->customers->map(fn ($customer) => "Klant: {$customer->name}")->all(),
+                    ])
+                    ->badge()
+                    ->color(fn (string $state) => str_starts_with($state, 'Klant:') ? 'warning' : 'gray')
+                    ->placeholder('Niemand'),
                 TextColumn::make('items_count')->label('Producten')->alignCenter(),
                 TextColumn::make('validity')
                     ->label('Geldig')
@@ -35,42 +40,24 @@ class PriceListsTable
                         (bool) $record->valid_until => 't.e.m. '.$record->valid_until->format('d/m/Y'),
                         default => 'Altijd',
                     })
-                    ->color('gray'),
+                    ->color('gray')
+                    ->toggleable(),
                 IconColumn::make('is_active')->label('Actief')->boolean(),
             ])
             ->recordActions([
-                EditAction::make(),
-                Action::make('duplicate')
-                    ->label('Dupliceren')
-                    ->icon(Heroicon::OutlinedDocumentDuplicate)
+                Action::make('prices')
+                    ->label('Prijzen')
+                    ->icon('heroicon-o-currency-euro')
+                    ->url(fn (PriceList $record) => PriceListResource::getUrl('prices', ['record' => $record])),
+                Action::make('settings')
+                    ->label('Instellingen')
+                    ->icon('heroicon-o-cog-6-tooth')
                     ->color('gray')
-                    ->visible(fn () => auth()->user()->can('create', PriceList::class))
-                    ->schema([
-                        TextInput::make('name')->label('Naam van de kopie')->required()->maxLength(255),
-                    ])
-                    ->fillForm(fn (PriceList $record) => ['name' => "{$record->name} (kopie)"])
-                    ->modalDescription('Kopieert alle producten en prijzen. De kopie staat nog niet actief en is aan niemand gekoppeld.')
-                    ->action(function (PriceList $record, array $data) {
-                        $copy = DB::transaction(function () use ($record, $data) {
-                            // Copy real fields only: the table row also carries withCount() columns.
-                            $copy = PriceList::create([
-                                ...$record->only(['description', 'valid_from', 'valid_until', 'translations']),
-                                'name' => $data['name'],
-                                'is_active' => false,
-                            ]);
-
-                            foreach ($record->items()->get() as $item) {
-                                $copy->items()->create($item->only(['product_id', 'price', 'min_quantity', 'note', 'sort_order']));
-                            }
-
-                            return $copy;
-                        });
-
-                        Notification::make()->success()->title("Kopie \"{$copy->name}\" aangemaakt")->send();
-                    }),
+                    ->url(fn (PriceList $record) => PriceListResource::getUrl('edit', ['record' => $record]))
+                    ->visible(fn (PriceList $record) => auth()->user()->can('update', $record)),
                 DeleteAction::make(),
             ])
             ->emptyStateHeading('Nog geen prijslijsten')
-            ->emptyStateDescription('Maak een prijslijst, zet er producten met een prijs in en koppel ze aan een klanttype.');
+            ->emptyStateDescription('Maak een prijslijst, kies voor welke klanttypes ze geldt en vul de prijzen in.');
     }
 }

@@ -3,39 +3,28 @@
 namespace App\Support;
 
 use App\Models\Customer;
-use App\Models\PriceList;
 use App\Models\PriceListItem;
 use Illuminate\Support\Facades\Storage;
 
 /**
- * What a customer may order, flattened for the portal: one row per price list
- * item, so a product that sits in two of their lists shows up in both.
+ * What a customer may order, flattened for the portal: one row per product,
+ * at the price {@see CustomerPrices} settles on.
  */
 final class PortalCatalogue
 {
-    /** @return array{lists: list<array>, items: list<array>} */
+    /** @return array{hasLists: bool, items: list<array>} */
     public static function for(Customer $customer): array
     {
-        $lists = $customer->visiblePriceLists()->get();
-
-        $items = PriceListItem::query()
-            ->whereIn('price_list_id', $lists->pluck('id'))
-            ->whereHas('product', fn ($q) => $q->where('is_active', true))
-            ->with('product.category')
-            ->get()
+        $items = CustomerPrices::for($customer)
             ->sortBy(fn (PriceListItem $item) => [
                 $item->product->category?->sort_order ?? PHP_INT_MAX,
-                $item->sort_order,
+                $item->product->sort_order,
                 $item->product->name,
             ])
             ->values();
 
         return [
-            'lists' => $lists->map(fn (PriceList $list) => [
-                'id' => $list->id,
-                'name' => $list->t('name'),
-                'description' => $list->t('description'),
-            ])->all(),
+            'hasLists' => $customer->visiblePriceLists()->exists(),
             'items' => $items->map(fn (PriceListItem $item) => self::item($item))->all(),
         ];
     }

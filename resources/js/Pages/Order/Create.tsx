@@ -6,10 +6,10 @@ import PortalLayout from '@/Layouts/PortalLayout';
 import { forgetBasket, useBasket } from '@/lib/basket';
 import { choice, trans, useT } from '@/lib/i18n';
 import { formatMoney, formatQuantity } from '@/lib/money';
-import type { CatalogueItem, DeliveryInfo, DeliveryOption, PriceListSummary, SharedProps } from '@/types';
+import type { CatalogueItem, DeliveryInfo, DeliveryOption, SharedProps } from '@/types';
 
 interface Props {
-    lists: PriceListSummary[];
+    hasLists: boolean;
     items: CatalogueItem[];
     reorder: Record<number, number> | null;
     delivery: DeliveryInfo;
@@ -17,7 +17,7 @@ interface Props {
 
 type Errors = Record<string, string>;
 
-export default function Create({ lists, items, reorder, delivery }: Props) {
+export default function Create({ hasLists, items, reorder, delivery }: Props) {
     const t = useT();
     const { auth } = usePage<SharedProps>().props;
     const userId = auth!.id;
@@ -28,7 +28,6 @@ export default function Create({ lists, items, reorder, delivery }: Props) {
 
     const [query, setQuery] = useState('');
     const [category, setCategory] = useState<number | 'all'>('all');
-    const [listId, setListId] = useState<number | 'all'>('all');
     const [deliveryDate, setDeliveryDate] = useState('');
     const [customerNote, setCustomerNote] = useState('');
     const [errors, setErrors] = useState<Errors>({});
@@ -51,11 +50,10 @@ export default function Create({ lists, items, reorder, delivery }: Props) {
         const needle = query.trim().toLowerCase();
         return items.filter(
             (item) =>
-                (listId === 'all' || item.priceListId === listId) &&
                 (category === 'all' || item.category?.id === category) &&
                 (!needle || item.search.includes(needle)),
         );
-    }, [items, query, category, listId]);
+    }, [items, query, category]);
 
     const groups = useMemo(() => {
         const map = new Map<string, CatalogueItem[]>();
@@ -82,7 +80,6 @@ export default function Create({ lists, items, reorder, delivery }: Props) {
     const belowMinimum = delivery.minimum !== null && totals.subtotal < delivery.minimum;
     const noDeliveryDays = delivery.hasRules && delivery.options.length === 0;
 
-    const listName = (id: number) => lists.find((list) => list.id === id)?.name;
 
     const submit = () => {
         setProcessing(true);
@@ -106,7 +103,7 @@ export default function Create({ lists, items, reorder, delivery }: Props) {
         );
     };
 
-    if (lists.length === 0) {
+    if (!hasLists) {
         return (
             <PortalLayout title={t.order.title}>
                 <EmptyState text={t.order.no_lists} />
@@ -149,18 +146,6 @@ export default function Create({ lists, items, reorder, delivery }: Props) {
                         )}
                     </div>
 
-                    {lists.length > 1 && (
-                        <div className="mb-4 flex flex-wrap gap-2" role="group" aria-label={t.common.price_list}>
-                            <Chip active={listId === 'all'} onClick={() => setListId('all')}>
-                                {t.order.all_categories}
-                            </Chip>
-                            {lists.map((list) => (
-                                <Chip key={list.id} active={listId === list.id} onClick={() => setListId(list.id)}>
-                                    {list.name}
-                                </Chip>
-                            ))}
-                        </div>
-                    )}
 
                     <div className="sticky top-[6.5rem] z-20 -mx-4 mb-5 bg-canvas/95 px-4 pb-3 pt-1 backdrop-blur md:top-16 sm:-mx-6 sm:px-6">
                         <input
@@ -196,7 +181,6 @@ export default function Create({ lists, items, reorder, delivery }: Props) {
                                         <ProductRow
                                             key={item.id}
                                             item={item}
-                                            listName={lists.length > 1 ? listName(item.priceListId) : undefined}
                                             quantity={basket.lines[item.id] ?? 0}
                                             error={errors[`lines.${item.id}`]}
                                             onChange={(qty) => setQuantity(item.id, qty)}
@@ -247,13 +231,11 @@ export default function Create({ lists, items, reorder, delivery }: Props) {
 
 function ProductRow({
     item,
-    listName,
     quantity,
     error,
     onChange,
 }: {
     item: CatalogueItem;
-    listName?: string;
     quantity: number;
     error?: string;
     onChange: (quantity: number) => void;
@@ -262,7 +244,6 @@ function ProductRow({
     const meta = [
         item.origin && trans(t.order.origin, { origin: item.origin }),
         item.minQuantity && trans(t.order.minimum, { min: formatQuantity(item.minQuantity, item.unit) }),
-        listName,
     ].filter(Boolean);
 
     return (

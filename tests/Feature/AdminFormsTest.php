@@ -15,8 +15,8 @@ use App\Filament\Resources\Orders\Pages\ViewOrder;
 use App\Filament\Resources\Orders\RelationManagers\ItemsRelationManager as OrderItemsRelationManager;
 use App\Filament\Resources\PriceLists\Pages\CreatePriceList;
 use App\Filament\Resources\PriceLists\Pages\EditPriceList;
-use App\Filament\Resources\PriceLists\Pages\ListPriceLists;
-use App\Filament\Resources\PriceLists\RelationManagers\ItemsRelationManager as PriceListItemsRelationManager;
+use App\Filament\Resources\PriceLists\Pages\ManagePrices;
+use App\Filament\Resources\PriceLists\PriceListResource;
 use App\Filament\Resources\ProductCategories\Pages\ManageProductCategories;
 use App\Filament\Resources\Products\Pages\ManageProducts;
 use App\Filament\Resources\Roles\Pages\CreateRole;
@@ -108,41 +108,29 @@ class AdminFormsTest extends TestCase
         Livewire::test(OrdersRelationManager::class, ['ownerRecord' => $customer, 'pageClass' => EditCustomer::class])->assertOk();
     }
 
-    public function test_price_list_pages_items_and_actions(): void
+    public function test_price_list_pages_and_actions(): void
     {
+        $business = PriceList::firstWhere('name', 'Zakelijk standaard');
+
         Livewire::test(CreatePriceList::class)
-            ->fillForm(['name' => 'Kerst', 'customerTypes' => [CustomerType::first()->id]])
+            ->fillForm(['name' => 'Kerst', 'customerTypes' => [CustomerType::first()->id], 'start' => ['from' => $business->id, 'percentage' => 10, 'step' => '0.10']])
             ->call('create')
-            ->assertHasNoFormErrors();
+            ->assertHasNoFormErrors()
+            ->assertRedirect(PriceListResource::getUrl('prices', ['record' => PriceList::firstWhere('name', 'Kerst')]));
 
         $list = PriceList::firstWhere('name', 'Kerst');
+        $this->assertSame($business->items()->count(), $list->items()->count(), 'Started from the business list.');
+        $this->assertSame('27.00', $list->items()->where('product_id', Product::firstWhere('slug', 'kabeljauwfilet')->id)->value('price'), '24,50 + 10% rounded up to 10 cent.');
+
         Livewire::test(EditPriceList::class, ['record' => $list->getRouteKey()])->call('save')->assertHasNoFormErrors();
 
-        $manager = fn () => Livewire::test(PriceListItemsRelationManager::class, ['ownerRecord' => $list, 'pageClass' => EditPriceList::class]);
-
-        $manager()
-            ->callAction(TestAction::make('addMany')->table(), data: ['products' => Product::orderBy('id')->limit(3)->pluck('id')->all()])
-            ->assertHasNoActionErrors();
-        $this->assertSame(3, $list->items()->count());
-
-        $item = $list->items()->first();
-        $manager()
-            ->callAction(TestAction::make('edit')->table($item), data: ['price' => 12.5])
-            ->assertHasNoActionErrors();
-
-        $manager()
-            ->callAction(TestAction::make('create')->table(), data: ['product_id' => Product::whereNotIn('id', $list->items()->select('product_id'))->value('id'), 'price' => 3])
+        Livewire::test(ManagePrices::class, ['record' => $list->getRouteKey()])
+            ->callAction('adjust', data: ['percentage' => -10, 'step' => '0'])
             ->assertHasNoActionErrors()
-            ->selectTableRecords([$item->getKey()])
-            ->callAction(TestAction::make('adjust')->table()->bulk(), data: ['percentage' => 10])
+            ->callAction('copyFrom', data: ['from' => $business->id, 'percentage' => 0, 'step' => '0', 'overwrite' => '1'])
             ->assertHasNoActionErrors();
 
-        $this->assertSame('13.75', $item->fresh()->price);
-
-        Livewire::test(ListPriceLists::class)
-            ->callAction(TestAction::make('duplicate')->table($list), data: ['name' => 'Kerst kopie'])
-            ->assertHasNoActionErrors();
-        $this->assertSame(4, PriceList::firstWhere('name', 'Kerst kopie')->items()->count());
+        $this->assertSame('24.50', $list->items()->where('product_id', Product::firstWhere('slug', 'kabeljauwfilet')->id)->value('price'));
     }
 
     public function test_order_pages_status_and_items(): void

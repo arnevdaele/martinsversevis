@@ -82,11 +82,11 @@ class CustomerForm
                                     ->helperText('Bepaalt welke prijslijsten deze klant ziet.'),
 
                                 Select::make('extraPriceLists')
-                                    ->label('Extra prijslijsten')
+                                    ->label('Eigen prijslijsten')
                                     ->relationship('extraPriceLists', 'name')
                                     ->multiple()
                                     ->preload()
-                                    ->helperText('Bovenop de lijsten van het klanttype. Handig voor een uitzondering.'),
+                                    ->helperText('Prijzen hierin gaan voor op die van het klanttype. Makkelijker: de knop "Eigen prijzen" bovenaan.'),
 
                                 TextEntry::make('type_lists')
                                     ->label('Via het klanttype')

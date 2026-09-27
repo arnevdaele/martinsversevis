@@ -11,12 +11,6 @@ export interface SharedProps {
     [key: string]: unknown;
 }
 
-export interface PriceListSummary {
-    id: number;
-    name: string;
-    description: string | null;
-}
-
 export interface CatalogueItem {
     id: number;
     priceListId: number;

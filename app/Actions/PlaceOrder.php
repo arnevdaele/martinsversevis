@@ -9,6 +9,7 @@ use App\Models\Customer;
 use App\Models\CustomerUser;
 use App\Models\Order;
 use App\Models\PriceListItem;
+use App\Support\CustomerPrices;
 use App\Support\DeliveryCalendar;
 use App\Support\Locales;
 use App\Support\Money;
@@ -47,15 +48,8 @@ class PlaceOrder
             throw ValidationException::withMessages(['lines' => __('orders.errors.empty')]);
         }
 
-        $visibleListIds = $customer->visiblePriceLists()->pluck('id');
-
-        $items = PriceListItem::query()
-            ->with('product')
-            ->whereIn('id', array_keys($lines))
-            ->whereIn('price_list_id', $visibleListIds)
-            ->whereHas('product', fn ($q) => $q->where('is_active', true))
-            ->get()
-            ->keyBy('id');
+        // Only the items the portal showed: the customer's own price per product.
+        $items = CustomerPrices::for($customer)->keyBy('id');
 
         $errors = [];
 

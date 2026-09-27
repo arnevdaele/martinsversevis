@@ -79,9 +79,7 @@ class PortalTest extends TestCase
             ->get('/portal')
             ->assertInertia(fn (Assert $page) => $page
                 ->component('Order/Create')
-                ->has('lists', 2)
-                ->where('lists.0.name', 'Direct')
-                ->where('lists.1.name', 'Via type')
+                ->where('hasLists', true)
                 ->has('items', 2));
     }
 

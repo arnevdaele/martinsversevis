@@ -147,7 +147,7 @@ class OrderController extends Controller
 
     /**
      * "Order again": map the old order's products onto what the customer can
-     * order today. Products that left their lists are silently dropped.
+     * order today. Products no longer on offer are silently dropped.
      *
      * @return array<int, float>|null price_list_item_id => quantity
      */
@@ -165,16 +165,13 @@ class OrderController extends Controller
             return null;
         }
 
-        $byListAndProduct = [];
-        foreach ($order->items as $orderItem) {
-            $byListAndProduct[$orderItem->price_list_id.':'.$orderItem->product_id] = (float) $orderItem->quantity;
-        }
+        // Match on product only: today's price may come from a different list.
+        $quantities = $order->items->pluck('quantity', 'product_id');
 
         $lines = [];
         foreach ($items as $item) {
-            $key = $item['priceListId'].':'.$item['productId'];
-            if (isset($byListAndProduct[$key])) {
-                $lines[$item['id']] = $byListAndProduct[$key];
+            if ($quantities->has($item['productId'])) {
+                $lines[$item['id']] = (float) $quantities[$item['productId']];
             }
         }
 

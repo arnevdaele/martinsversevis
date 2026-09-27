@@ -3,12 +3,15 @@
 namespace App\Filament\Resources\PriceLists\Schemas;
 
 use App\Filament\Support\Translations;
+use App\Models\PriceList;
+use App\Support\ListPrices;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Schemas\Components\Section;
+use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
 
 class PriceListForm
@@ -54,13 +57,42 @@ class PriceListForm
                             ->relationship('customerTypes', 'name')
                             ->multiple()
                             ->preload()
-                            ->helperText('Alle klanten van deze types.'),
+                            ->helperText('Alle klanten van deze types zien de lijst.'),
                         Select::make('customers')
-                            ->label('Individuele klanten')
+                            ->label('Of enkel voor bepaalde klanten')
                             ->relationship('customers', 'name')
                             ->multiple()
                             ->searchable()
-                            ->helperText('Enkel voor een uitzondering, bovenop hun eigen type.'),
+                            ->helperText('Hun prijzen in deze lijst gaan voor op die van hun klanttype. Zo geef je één klant een andere prijs.'),
+                    ]),
+
+                Section::make('Beginnen met prijzen')
+                    ->description('Optioneel: neem de prijzen van een bestaande lijst over, eventueel duurder of goedkoper. Daarna kan je alles nog aanpassen.')
+                    ->columnSpanFull()
+                    ->columns(3)
+                    ->visibleOn('create')
+                    ->schema([
+                        Select::make('start.from')
+                            ->label('Prijzen overnemen van')
+                            ->options(fn () => PriceList::orderBy('name')->pluck('name', 'id'))
+                            ->placeholder('Leeg beginnen')
+                            ->live()
+                            ->dehydrated(false),
+                        TextInput::make('start.percentage')
+                            ->label('Aanpassing')
+                            ->helperText('15 = 15% duurder')
+                            ->numeric()
+                            ->default(0)
+                            ->suffix('%')
+                            ->visible(fn (Get $get) => filled($get('start.from')))
+                            ->dehydrated(false),
+                        Select::make('start.step')
+                            ->label('Afronden')
+                            ->options(ListPrices::steps())
+                            ->default('0.10')
+                            ->native(false)
+                            ->visible(fn (Get $get) => filled($get('start.from')))
+                            ->dehydrated(false),
                     ]),
             ]);
     }

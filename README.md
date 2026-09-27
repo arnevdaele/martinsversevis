@@ -49,11 +49,13 @@ php artisan app:create-admin   # asks for name, e-mail and password
 ## How it fits together
 
 1. **Customer types** (Zakelijk, Particulier, plus any you add) group customers.
-2. **Price lists** are linked to customer types, and optionally to individual
-   customers as an exception. They can have a validity period. Prices are set
-   per product for all lists at once, under **Catalogus → Prijzen** (a grid)
-   or in the product form; "Prijzen overnemen" fills a list from another
-   with a markup (e.g. Particulier = Zakelijk + 15%).
+2. **Price lists** are linked to customer types. Click a list to see every
+   product with a price field: type a price to put it in the list, empty it to
+   take it out, tick "Dagprijs" for market-priced products. A new list can start
+   from another list's prices (e.g. Particulier = Zakelijk + 15%). New products
+   get their prices for every list right in the product form.
+   **One customer paying something else?** "Eigen prijzen" on the customer
+   creates a list just for them; fill in only the products that differ.
 3. **Customers** get one or more **portal logins**. Adding a login sends an
    invitation to choose a password.
 4. A customer orders from their lists. The order goes to every staff member

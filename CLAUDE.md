@@ -66,15 +66,18 @@ policy. The role and user forms are generated from that list (`PermissionMatrix`
 
 - The catalogue (`Product`) is shared; prices live on `PriceListItem`. A null
   price is a *dagprijs*: orderable, priced by staff afterwards.
-- Prices are edited per product across all lists at once: the **Prijzen** page
-  (`App\Filament\Pages\Prices`, a grid of products × lists) and the Prijzen
-  block in the product form. Both go through `PriceGrid::set()`, where a cell
-  is `""` (not in the list), a price, or `"d"` (day price). "Prijzen overnemen"
-  (`PriceGrid::copy`) fills one list from another with a markup, rounded up.
-  The per-list items screen stays for minimum quantities, notes and order.
-- A customer sees lists linked to their type plus lists granted to them
-  directly, filtered by `PriceList::currentlyValid()`. `Customer::visiblePriceLists()`
-  is the only definition of that — use it, don't re-derive it.
+- **Editing prices**: clicking a list opens `ManagePrices`, which lists *every*
+  product with a price field (typed price = in the list, empty = out) and a
+  day-price checkbox. The product form has the same per general list. Both
+  write through `ListPrices::set()`. New lists can start from another list
+  with a markup (`ListPrices::copy`); "Alle prijzen aanpassen" is `ListPrices::adjust`.
+- **One price per product per customer**: `CustomerPrices::for($customer)`.
+  A list linked to the customer directly beats their type's lists (that is how
+  exception prices work, via the "Eigen prijzen" button on a customer); within
+  a level the lowest fixed price wins. The portal shows exactly these items and
+  `PlaceOrder` only accepts them.
+- Which lists a customer can see at all: `Customer::visiblePriceLists()` (type
+  lists + their own lists, filtered by `PriceList::currentlyValid()`).
 - `PlaceOrder` is the only way an order is created. The portal only sends
   price list item ids + quantities; everything else is looked up again.
 - Order items **snapshot** name, unit, price and VAT. Editing the catalogue
@@ -130,6 +133,8 @@ sends one directly to check the SMTP settings.
   `decimal:2`, so the options are `'6.00'`, not `'6'`, or edit forms show empty.
 - Rows in tables with `withCount()` carry `*_count` attributes; never
   `replicate()` such a record straight into a save.
+- Eloquent `Collection::only()` filters by model key **and re-indexes** —
+  after `keyBy()` use `get()`/`filter()`, not `only()`.
 - `AdminFormsTest` opens and submits every form. Add new forms there, because
   a page loading fine says nothing about its modals.
 
