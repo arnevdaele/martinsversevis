@@ -1,0 +1,102 @@
+# Coolify: create a "Docker Compose" resource pointing at this repository.
+# See COOLIFY.md for the environment variables to fill in.
+
+x-app: &app
+  build:
+    context: .
+    dockerfile: Dockerfile
+  restart: unless-stopped
+  environment: &env
+    APP_NAME: "Martins Verse Vis"
+    APP_ENV: production
+    APP_DEBUG: "false"
+    APP_KEY: "${APP_KEY:?Set APP_KEY (php artisan key:generate --show)}"
+    APP_URL: "${APP_URL:?Set APP_URL to the public URL}"
+    APP_LOCALE: nl
+    APP_FALLBACK_LOCALE: nl
+    APP_TIMEZONE: Europe/Brussels
+    DB_CONNECTION: pgsql
+    DB_HOST: postgres
+    DB_PORT: 5432
+    DB_DATABASE: martinsversevis
+    DB_USERNAME: ${SERVICE_USER_POSTGRES}
+    DB_PASSWORD: ${SERVICE_PASSWORD_POSTGRES}
+    SESSION_DRIVER: database
+    SESSION_SECURE_COOKIE: "true"
+    CACHE_STORE: database
+    QUEUE_CONNECTION: database
+    FILESYSTEM_DISK: local
+    # Defaults fit OVH mail (Zimbra / MX Plan): SSL on 465, full address as username.
+    MAIL_MAILER: ${MAIL_MAILER:-smtp}
+    MAIL_SCHEME: ${MAIL_SCHEME:-smtps}
+    MAIL_HOST: ${MAIL_HOST:-smtp.mail.ovh.net}
+    MAIL_PORT: ${MAIL_PORT:-465}
+    MAIL_HOURLY_LIMIT: ${MAIL_HOURLY_LIMIT:-150}
+    MAIL_USERNAME: ${MAIL_USERNAME}
+    MAIL_PASSWORD: ${MAIL_PASSWORD}
+    MAIL_FROM_ADDRESS: "${MAIL_FROM_ADDRESS:?Set MAIL_FROM_ADDRESS}"
+    MAIL_FROM_NAME: "Martins Verse Vis"
+  volumes:
+    # Product photos and other uploads survive a redeploy.
+    - storage:/var/www/html/storage/app
+  depends_on:
+    postgres:
+      condition: service_healthy
+
+services:
+  app:
+    <<: *app
+    environment:
+      <<: *env
+      SERVICE_FQDN_APP_8080: ""
+      # Migrations, storage:link and config/route/view caches on every deploy.
+      AUTORUN_ENABLED: "true"
+      AUTORUN_LARAVEL_MIGRATION: "true"
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8080/up"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 30s
+
+  queue:
+    <<: *app
+    # Wait for the app's migrations before touching the jobs table.
+    depends_on:
+      app:
+        condition: service_healthy
+    command: ["php", "/var/www/html/artisan", "queue:work", "--tries=3", "--backoff=30", "--max-time=3600"]
+    stop_signal: SIGTERM
+    healthcheck:
+      test: ["CMD", "healthcheck-queue"]
+      start_period: 10s
+
+  scheduler:
+    <<: *app
+    depends_on:
+      app:
+        condition: service_healthy
+    command: ["php", "/var/www/html/artisan", "schedule:work"]
+    stop_signal: SIGTERM
+    healthcheck:
+      test: ["CMD", "healthcheck-schedule"]
+      start_period: 10s
+
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: martinsversevis
+      POSTGRES_USER: ${SERVICE_USER_POSTGRES}
+      POSTGRES_PASSWORD: ${SERVICE_PASSWORD_POSTGRES}
+    volumes:
+      - postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  storage:
+  postgres:
