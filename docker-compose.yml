@@ -11,7 +11,9 @@ x-app: &app
     APP_ENV: production
     APP_DEBUG: "false"
     APP_KEY: "${APP_KEY:?Set APP_KEY (php artisan key:generate --show)}"
-    APP_URL: "${APP_URL:?Set APP_URL to the public URL}"
+    # Links in mails. Empty or localhost falls back to the domain set on the app service.
+    APP_URL: ${APP_URL:-}
+    SERVICE_URL_APP: ${SERVICE_URL_APP:-}
     APP_LOCALE: nl
     APP_FALLBACK_LOCALE: nl
     APP_TIMEZONE: Europe/Brussels

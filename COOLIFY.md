@@ -26,7 +26,7 @@ Fill in the rest:
 | Variable | Value |
 |---|---|
 | `APP_KEY` | Output of `php artisan key:generate --show` (run it locally). **Keep it**: changing it logs everyone out and breaks pending invitation links. |
-| `APP_URL` | The public URL, e.g. `https://bestellen.martinsversevis.be`. Used in e-mail links. |
+| `APP_URL` | The public URL, e.g. `https://bestellen.martinsversevis.be`. Used in e-mail links. If empty or `localhost`, the domain set on the **app** service is used instead. `app:mail-test` shows which one is in effect. |
 | `MAIL_USERNAME` | The full OVH mailbox address, e.g. `bestellingen@martinsversevis.be`. |
 | `MAIL_PASSWORD` | That mailbox's password. |
 | `MAIL_FROM_ADDRESS` | **The same address as `MAIL_USERNAME`.** OVH only lets a mailbox send as itself. |

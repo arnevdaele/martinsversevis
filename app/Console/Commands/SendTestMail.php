@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Support\AppUrl;
 use Illuminate\Console\Attributes\Description;
 use Illuminate\Console\Attributes\Signature;
 use Illuminate\Console\Command;
@@ -23,6 +24,12 @@ class SendTestMail extends Command
 
         if (($config['username'] ?? null) && config('mail.from.address') !== $config['username']) {
             $this->components->warn('From differs from the SMTP username. OVH only lets a mailbox send as itself — expect a rejection.');
+        }
+
+        $this->components->twoColumnDetail('Links in mails', route('portal.login'));
+
+        if (AppUrl::isLocal(config('app.url'))) {
+            $this->components->warn('Links in mails point at this machine. Set APP_URL to the public URL, or a domain on the app service in Coolify.');
         }
 
         try {
