@@ -37,6 +37,7 @@ class DeliveryScheduleForm
             ->components([
                 Grid::make(1)->columnSpan(2)->schema([
                     Section::make('Leverdagen')
+                        ->key('days')
                         ->description('Zet de dagen aan waarop je levert, en kies tot wanneer de klant daarvoor kan bestellen.')
                         ->headerActions([self::presetAction()])
                         ->schema([

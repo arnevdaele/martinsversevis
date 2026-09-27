@@ -78,7 +78,7 @@ class ProductResource extends Resource
                     ->maxLength(255),
                 Select::make('product_category_id')
                     ->label('Categorie')
-                    ->relationship('category', 'name', fn (Builder $q) => $q->orderBy('sort_order'))
+                    ->relationship('category', 'name', fn (Builder $query) => $query->orderBy('sort_order'))
                     ->createOptionForm([
                         TextInput::make('name')->label('Naam')->required()
                             ->live(onBlur: true)
@@ -97,8 +97,9 @@ class ProductResource extends Resource
                     ->helperText('Per kg en per liter mag de klant decimalen bestellen, de rest per stuk.'),
                 Select::make('vat_rate')
                     ->label('Btw-tarief')
-                    ->options(['0' => '0%', '6' => '6%', '12' => '12%', '21' => '21%'])
-                    ->default('6')
+                    // Keys match the decimal:2 cast, or an edit form would show an empty select.
+                    ->options(['0.00' => '0%', '6.00' => '6%', '12.00' => '12%', '21.00' => '21%'])
+                    ->default('6.00')
                     ->required()
                     ->native(false),
                 TextInput::make('origin')->label('Herkomst')->placeholder('Noordzee')->maxLength(255),

@@ -114,6 +114,19 @@ sends one directly to check the SMTP settings.
   price list item id, and is pruned against what the customer can order today.
 - Mobile first: the people ordering are often in a kitchen with a phone.
 
+## Filament gotchas
+
+- Callbacks get their arguments **by parameter name**: `fn (Builder $query)`,
+  `fn (Unique $rule)`, `fn (Get $get)`. A differently named parameter
+  (`fn (Builder $q)`) silently gets a fresh, model-less builder and crashes
+  when the form renders.
+- Select option keys must match the stored format: `vat_rate` is cast to
+  `decimal:2`, so the options are `'6.00'`, not `'6'`, or edit forms show empty.
+- Rows in tables with `withCount()` carry `*_count` attributes; never
+  `replicate()` such a record straight into a save.
+- `AdminFormsTest` opens and submits every form. Add new forms there, because
+  a page loading fine says nothing about its modals.
+
 ## Checks
 
 ```

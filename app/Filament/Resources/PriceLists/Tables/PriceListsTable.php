@@ -52,8 +52,12 @@ class PriceListsTable
                     ->modalDescription('Kopieert alle producten en prijzen. De kopie staat nog niet actief en is aan niemand gekoppeld.')
                     ->action(function (PriceList $record, array $data) {
                         $copy = DB::transaction(function () use ($record, $data) {
-                            $copy = $record->replicate()->fill(['name' => $data['name'], 'is_active' => false]);
-                            $copy->save();
+                            // Copy real fields only: the table row also carries withCount() columns.
+                            $copy = PriceList::create([
+                                ...$record->only(['description', 'valid_from', 'valid_until', 'translations']),
+                                'name' => $data['name'],
+                                'is_active' => false,
+                            ]);
 
                             foreach ($record->items()->get() as $item) {
                                 $copy->items()->create($item->only(['product_id', 'price', 'min_quantity', 'note', 'sort_order']));
