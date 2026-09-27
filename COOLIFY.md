@@ -33,8 +33,20 @@ Fill in the rest:
 | `MAIL_CUSTOMER_REPLY_TO` | Optional. Where customers' replies to confirmations and invitations go, e.g. the client's own `info@martinsversevis.be`. Needed when the sending mailbox isn't the client's. |
 
 The mail server settings default to OVH (Zimbra and MX Plan use the same ones):
-`MAIL_HOST=smtp.mail.ovh.net`, `MAIL_PORT=465`, `MAIL_SCHEME=smtps`. Only set
+`MAIL_HOST=smtp.mail.ovh.net`, `MAIL_PORT=587`, `MAIL_SCHEME=smtp`. The connection
+is still encrypted: on 587 it upgrades to TLS (STARTTLS) before logging in. Only set
 them to use another provider.
+
+OVH also accepts SSL on port 465, but many hosting providers block outgoing 465 on
+new servers, which shows up as "Connection timed out" in `app:mail-test`. Check
+which ports get out from the app container with:
+
+```bash
+php -r 'foreach ([465, 587] as $p) { echo $p, ": ", @fsockopen("smtp.mail.ovh.net", $p, $e, $s, 5) ? "open" : "BLOCKED ($s)", PHP_EOL; }'
+```
+
+If both are blocked, ask the host to lift the block, or move to a provider with an
+HTTP sending API (Brevo, Postmark), which needs a small code change.
 
 ### About OVH's free mail
 

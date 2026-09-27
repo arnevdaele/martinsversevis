@@ -26,11 +26,12 @@ x-app: &app
     CACHE_STORE: database
     QUEUE_CONNECTION: database
     FILESYSTEM_DISK: local
-    # Defaults fit OVH mail (Zimbra / MX Plan): SSL on 465, full address as username.
+    # Defaults fit OVH mail (Zimbra / MX Plan): port 587 with STARTTLS, full address as username.
+    # 587 rather than 465: many hosts (Hetzner among them) block outgoing 465 on new servers.
     MAIL_MAILER: ${MAIL_MAILER:-smtp}
-    MAIL_SCHEME: ${MAIL_SCHEME:-smtps}
+    MAIL_SCHEME: ${MAIL_SCHEME:-smtp}
     MAIL_HOST: ${MAIL_HOST:-smtp.mail.ovh.net}
-    MAIL_PORT: ${MAIL_PORT:-465}
+    MAIL_PORT: ${MAIL_PORT:-587}
     MAIL_HOURLY_LIMIT: ${MAIL_HOURLY_LIMIT:-150}
     MAIL_USERNAME: ${MAIL_USERNAME}
     MAIL_PASSWORD: ${MAIL_PASSWORD}
