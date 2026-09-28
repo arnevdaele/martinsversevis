@@ -2,6 +2,7 @@
 
 namespace App\Providers\Filament;
 
+use App\Http\Controllers\Admin\PrintDeliveryNotes;
 use App\Http\Controllers\Admin\PrintPickingList;
 use App\Support\BackgroundHealth;
 use Filament\Http\Middleware\Authenticate;
@@ -57,9 +58,11 @@ class AdminPanelProvider extends PanelProvider
 
                 return $problems ? view('filament.background-health', ['problems' => $problems]) : '';
             })
-            // Paper for the buying and packing, outside the panel layout.
+            // Paper for buying, packing and delivering, outside the panel layout.
             ->authenticatedRoutes(function () {
                 Route::get('dagoverzicht/afdrukken', PrintPickingList::class)->name('picking-list.print');
+                Route::get('dagoverzicht/leveringsbonnen', [PrintDeliveryNotes::class, 'day'])->name('delivery-notes.day');
+                Route::get('bestellingen/{order}/leveringsbon', [PrintDeliveryNotes::class, 'order'])->name('delivery-notes.order');
             })
             ->colors([
                 // Sea-blue, matching the portal.

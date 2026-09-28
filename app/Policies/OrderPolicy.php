@@ -19,6 +19,12 @@ class OrderPolicy extends PermissionPolicy
         return $user->canSeeCustomerType($record->customer->customer_type_id);
     }
 
+    /** The accounting export; it only ever contains orders the user may see. */
+    public function export(User $user): bool
+    {
+        return $this->allows($user, 'export');
+    }
+
     /** Orders come from the portal only. */
     public function create(User $user): bool
     {

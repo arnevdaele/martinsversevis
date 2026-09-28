@@ -86,7 +86,7 @@ class OrderStatusMailTest extends TestCase
         Mail::assertNotQueued(OrderStatusChanged::class);
     }
 
-    public function test_cancelling_renders_without_the_lines_and_delivered_asks_nothing(): void
+    public function test_cancelling_renders_without_the_lines_and_delivered_mails_only_when_asked(): void
     {
         Livewire::test(ViewOrder::class, ['record' => $this->order->getRouteKey()])
             ->callAction('status-cancelled', data: ['notify' => true, 'note' => 'Geen tarbot te krijgen.']);
@@ -104,7 +104,7 @@ class OrderStatusMailTest extends TestCase
         $other->save();
 
         Livewire::test(ViewOrder::class, ['record' => $other->getRouteKey()])
-            ->callAction('status-delivered')
+            ->callAction('status-delivered', data: ['notify' => false])
             ->assertHasNoActionErrors();
 
         $this->assertSame('delivered', $other->fresh()->status->value);

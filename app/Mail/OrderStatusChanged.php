@@ -14,15 +14,15 @@ use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
 
 /**
- * To the person who placed the order: staff confirmed or cancelled it. Sent
- * with the final lines, so day prices filled in by then show up too.
+ * To the person who placed the order: staff confirmed, delivered or cancelled
+ * it. Sent with the final lines, so day prices and weights filled in by then show up too.
  */
 class OrderStatusChanged extends Mailable implements ShouldQueue
 {
     use Queueable, RespectsMailQuota, SerializesModels;
 
     /** The statuses a customer hears about. */
-    public const STATUSES = [OrderStatus::Confirmed, OrderStatus::Cancelled];
+    public const STATUSES = [OrderStatus::Confirmed, OrderStatus::Delivered, OrderStatus::Cancelled];
 
     public function __construct(public Order $order, public ?string $note = null) {}
 

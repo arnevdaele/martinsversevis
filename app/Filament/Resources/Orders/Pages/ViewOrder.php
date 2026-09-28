@@ -44,6 +44,11 @@ class ViewOrder extends ViewRecord
         return [
             $this->statusAction(OrderStatus::Confirmed, 'Bevestigen', 'heroicon-o-check', [OrderStatus::New]),
             $this->statusAction(OrderStatus::Delivered, 'Geleverd', 'heroicon-o-truck', [OrderStatus::New, OrderStatus::Confirmed]),
+            Action::make('delivery-note')
+                ->label('Leveringsbon')
+                ->icon('heroicon-o-printer')
+                ->color('gray')
+                ->url(fn (Order $record) => route('filament.admin.delivery-notes.order', $record), shouldOpenInNewTab: true),
             EditAction::make()->label('Bewerken')->color('gray'),
             ActionGroup::make([
                 $this->statusAction(OrderStatus::Cancelled, 'Annuleren', 'heroicon-o-x-mark', [OrderStatus::New, OrderStatus::Confirmed])
@@ -70,8 +75,9 @@ class ViewOrder extends ViewRecord
                     ->label("Klant verwittigen per e-mail ({$record->customerUser->email})")
                     ->helperText(match (true) {
                         ! $record->customerUser->receives_order_confirmations => 'Deze klant heeft e-mails over bestellingen uitgeschakeld.',
-                        $to === OrderStatus::Confirmed && $record->has_unpriced_items => 'Let op: nog niet alle dagprijzen zijn ingevuld. De klant ziet dan "dagprijs" bij die lijnen.',
+                        $to !== OrderStatus::Cancelled && $record->has_unpriced_items => 'Let op: nog niet alle dagprijzen zijn ingevuld. De klant ziet dan "dagprijs" bij die lijnen.',
                         $to === OrderStatus::Confirmed => 'Met de definitieve lijnen, prijzen en het totaal.',
+                        $to === OrderStatus::Delivered => 'Met de gewogen hoeveelheden en het definitieve totaal. De leveringsbon staat dan ook in het portaal.',
                         default => null,
                     })
                     ->default($record->customerUser->receives_order_confirmations)

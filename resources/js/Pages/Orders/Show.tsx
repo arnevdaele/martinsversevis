@@ -13,7 +13,16 @@ interface OrderDetail extends OrderSummary {
     items: { id: number; name: string; note: string | null; quantity: string; ordered: string | null; unitPrice: string | null; lineTotal: string | null }[];
 }
 
-export default function Show({ order, changeUntil }: { order: OrderDetail; changeUntil: string | null; justPlaced: boolean }) {
+export default function Show({
+    order,
+    changeUntil,
+    deliveryNoteUrl,
+}: {
+    order: OrderDetail;
+    changeUntil: string | null;
+    deliveryNoteUrl: string | null;
+    justPlaced: boolean;
+}) {
     const t = useT();
     const { errors } = usePage<{ errors: Record<string, string> }>().props;
     const [confirming, setConfirming] = useState(false);
@@ -56,12 +65,23 @@ export default function Show({ order, changeUntil }: { order: OrderDetail; chang
                             {t.orders.change}
                         </Link>
                     )}
-                <Link
-                    href={`/portal?reorder=${order.id}`}
-                    className="inline-flex min-h-11 items-center rounded-lg bg-white px-4 text-sm font-semibold text-slate-800 ring-1 ring-line hover:bg-slate-50"
-                >
-                    {t.order.reorder}
-                </Link>
+                    {deliveryNoteUrl && (
+                        // A plain page to print or save, not part of the app.
+                        <a
+                            href={deliveryNoteUrl}
+                            target="_blank"
+                            rel="noopener"
+                            className="inline-flex min-h-11 items-center rounded-lg bg-white px-4 text-sm font-semibold text-slate-800 ring-1 ring-line hover:bg-slate-50"
+                        >
+                            {t.orders.delivery_note}
+                        </a>
+                    )}
+                    <Link
+                        href={`/portal?reorder=${order.id}`}
+                        className="inline-flex min-h-11 items-center rounded-lg bg-white px-4 text-sm font-semibold text-slate-800 ring-1 ring-line hover:bg-slate-50"
+                    >
+                        {t.order.reorder}
+                    </Link>
                 </div>
             </div>
 

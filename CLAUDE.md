@@ -101,6 +101,18 @@ policy. The role and user forms are generated from that list (`PermissionMatrix`
   per delivery day, the totals per product (purchase list) and every order (packing),
   cancelled orders left out and scoped with `visibleTo()`. The print version is a
   plain Blade page at `/admin/dagoverzicht/afdrukken`, registered via `authenticatedRoutes`.
+- **Leveringsbon** (`App\Support\DeliveryNotes`, views in `resources/views/documents`):
+  printable per order (`/admin/bestellingen/{order}/leveringsbon`) or per day from the
+  Dagoverzicht; each sheet renders in its customer's language. Our own header is
+  `CompanyDetails`, edited under Beheer › Bedrijfsgegevens (`settings.update`), stored
+  in the `settings` table (`Setting::read/write`, one json row per group). Customers get it in the portal only once the
+  order is Delivered. Marking an order Delivered can mail the weighed lines too.
+  VAT per rate: `Order::vatBreakdown()` / `OrderItem::vatAmount()`, used everywhere.
+- **Export** for the bookkeeper (`App\Support\OrderExport`, "Exporteren" on the order
+  list, permission `orders.export`): CSV per order (base + VAT per rate) or per line, by
+  delivery date (else the day it was placed), cancelled never included, `visibleTo()`.
+  Belgian Excel format: `;`, decimal comma, UTF-8 BOM, and cells starting with `=+-@`
+  get a `'` so they aren't run as formulas.
 - **Weights**: `order_items.delivered_quantity` is what actually went out (null = as
   ordered). `OrderItem::billedQuantity()` drives `line_total`, mails and the portal.
   Staff enter it on the order's items table or the Dagoverzicht, both through

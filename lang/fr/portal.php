@@ -117,6 +117,7 @@ return [
         'change_until' => 'Modification ou annulation possible jusqu’au :deadline.',
         'change_until_confirmed' => 'Modification ou annulation possible tant que nous ne l’avons pas confirmée.',
         'changeable' => 'Encore modifiable',
+        'delivery_note' => 'Bon de livraison',
     ],
     'account' => [
         'title' => 'Compte',
@@ -127,7 +128,7 @@ return [
         'new_password' => 'Nouveau mot de passe',
         'save' => 'Enregistrer',
         'saved' => 'Votre mot de passe a été modifié.',
-        'confirmations' => 'M’envoyer un e-mail pour chaque commande, et quand elle est confirmée ou annulée',
+        'confirmations' => 'M’envoyer un e-mail pour chaque commande, et quand elle est confirmée, livrée ou annulée',
         'language' => 'Langue du portail et des e-mails',
         'preferences_saved' => 'Préférences enregistrées.',
         'contact' => 'Vous souhaitez modifier vos coordonnées ? Contactez-nous.',

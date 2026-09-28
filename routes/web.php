@@ -36,6 +36,7 @@ Route::prefix('portal')
             Route::get('bestellingen', [OrderController::class, 'index'])->name('orders.index');
             Route::get('bestellingen/{order}', [OrderController::class, 'show'])->name('orders.show');
             Route::put('bestellingen/{order}', [OrderController::class, 'update'])->middleware('throttle:10,1')->name('orders.update');
+            Route::get('bestellingen/{order}/leveringsbon', [OrderController::class, 'deliveryNote'])->name('orders.delivery-note');
             Route::post('bestellingen/{order}/annuleren', [OrderController::class, 'cancel'])->middleware('throttle:10,1')->name('orders.cancel');
 
             Route::get('account', [AccountController::class, 'edit'])->name('account');

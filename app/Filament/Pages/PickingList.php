@@ -135,6 +135,13 @@ class PickingList extends Page
                 ->label('Afdrukken')
                 ->icon(Heroicon::OutlinedPrinter)
                 ->url(fn () => route('filament.admin.picking-list.print', ['date' => $this->day()->toDateString()]), shouldOpenInNewTab: true),
+            Action::make('delivery-notes')
+                ->label('Leveringsbonnen')
+                ->icon(Heroicon::OutlinedDocumentText)
+                ->color('gray')
+                ->tooltip('Eén leveringsbon per bestelling, om mee te geven')
+                ->visible(fn () => Day::for($this->day(), auth()->user())->orders->isNotEmpty())
+                ->url(fn () => route('filament.admin.delivery-notes.day', ['date' => $this->day()->toDateString()]), shouldOpenInNewTab: true),
         ];
     }
 

@@ -13,7 +13,7 @@
 </x-mail::panel>
 @endif
 
-@if ($status === 'confirmed')
+@if ($status !== 'cancelled')
 @include('mail._order-lines')
 @endif
 

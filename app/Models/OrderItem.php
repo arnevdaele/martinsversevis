@@ -29,6 +29,12 @@ class OrderItem extends Model
         ];
     }
 
+    /** The VAT on this line, rounded per line like the order totals. Zero while unpriced. */
+    public function vatAmount(): float
+    {
+        return $this->line_total === null ? 0.0 : Money::cents((float) $this->line_total * (float) $this->vat_rate / 100);
+    }
+
     protected static function booted(): void
     {
         // Staff may fill in a day price or the weighed quantity afterwards; the line follows.

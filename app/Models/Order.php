@@ -4,7 +4,6 @@ namespace App\Models;
 
 use App\Actions\PlaceOrder;
 use App\Enums\OrderStatus;
-use App\Support\Money;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
@@ -97,7 +96,7 @@ class Order extends Model
                 continue;
             }
             $subtotal += (float) $item->line_total;
-            $vat += Money::cents((float) $item->line_total * (float) $item->vat_rate / 100);
+            $vat += $item->vatAmount();
         }
 
         $this->forceFill([
@@ -106,5 +105,31 @@ class Order extends Model
             'total' => round($subtotal + $vat, 2),
             'has_unpriced_items' => $this->items->contains(fn (OrderItem $item) => $item->unit_price === null),
         ])->save();
+    }
+
+    /**
+     * Base and VAT per rate, for delivery notes and the accounting export.
+     * Built from the same per-line rounding as {@see recalculate()}, so it adds up to the totals.
+     *
+     * @return array<string, array{base: float, vat: float}> keyed by rate, e.g. "6.00", lowest first
+     */
+    public function vatBreakdown(): array
+    {
+        $this->loadMissing('items');
+
+        $rates = [];
+
+        foreach ($this->items as $item) {
+            if ($item->line_total === null) {
+                continue;
+            }
+            $rate = number_format((float) $item->vat_rate, 2, '.', '');
+            $rates[$rate]['base'] = round(($rates[$rate]['base'] ?? 0) + (float) $item->line_total, 2);
+            $rates[$rate]['vat'] = round(($rates[$rate]['vat'] ?? 0) + $item->vatAmount(), 2);
+        }
+
+        ksort($rates, SORT_NUMERIC);
+
+        return $rates;
     }
 }

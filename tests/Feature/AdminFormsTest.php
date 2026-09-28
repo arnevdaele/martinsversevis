@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Actions\PlaceOrder;
+use App\Filament\Pages\CompanySettings;
 use App\Filament\Resources\Customers\Pages\CreateCustomer;
 use App\Filament\Resources\Customers\Pages\EditCustomer;
 use App\Filament\Resources\Customers\RelationManagers\OrdersRelationManager;
@@ -31,6 +32,7 @@ use App\Models\Product;
 use App\Models\ProductCategory;
 use App\Models\User;
 use App\Notifications\CustomerInvitation;
+use App\Support\CompanyDetails;
 use App\Support\DeliveryCalendar;
 use Database\Seeders\DemoSeeder;
 use Filament\Actions\Testing\TestAction;
@@ -173,5 +175,22 @@ class AdminFormsTest extends TestCase
             ->callAction(TestAction::make('preset')->schemaComponent('days'), data: ['weekdays' => [1, 3], 'cutoff_days' => 2, 'cutoff_time' => '12:00'])
             ->call('save')
             ->assertHasNoFormErrors();
+    }
+
+    public function test_company_settings_form(): void
+    {
+        Livewire::test(CompanySettings::class)
+            ->assertFormSet(['name' => config('app.name')])
+            ->fillForm(['name' => 'Martins Verse Vis bv', 'address' => "Vismijn 1\n\n 8380 Zeebrugge ", 'vat_number' => 'BE0123.456.789', 'phone' => '', 'email' => 'info@mvv.test'])
+            ->call('save')
+            ->assertHasNoFormErrors();
+
+        $this->assertSame(['name' => 'Martins Verse Vis bv', 'address' => ['Vismijn 1', '8380 Zeebrugge'], 'vat_number' => 'BE0123.456.789', 'phone' => null, 'email' => 'info@mvv.test'], CompanyDetails::get());
+
+        Livewire::test(CompanySettings::class)
+            ->assertFormSet(['address' => "Vismijn 1\n8380 Zeebrugge"])
+            ->fillForm(['name' => ''])
+            ->call('save')
+            ->assertHasFormErrors(['name' => 'required']);
     }
 }

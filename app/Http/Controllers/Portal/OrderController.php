@@ -3,16 +3,19 @@
 namespace App\Http\Controllers\Portal;
 
 use App\Actions\PlaceOrder;
+use App\Enums\OrderStatus;
 use App\Http\Controllers\Controller;
 use App\Models\CustomerUser;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Support\DeliveryCalendar;
+use App\Support\DeliveryNotes;
 use App\Support\Money;
 use App\Support\OrderChanges;
 use App\Support\PortalCatalogue;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response as HttpResponse;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
@@ -148,9 +151,18 @@ class OrderController extends Controller
                     'lineTotal' => $item->line_total === null ? null : Money::format($item->line_total),
                 ])->all(),
             ],
+            'deliveryNoteUrl' => $order->status === OrderStatus::Delivered ? route('portal.orders.delivery-note', $order) : null,
             'changeUntil' => $this->changeUntil($order, 'portal.orders.change_until'),
             'justPlaced' => (bool) $request->session()->get('orderPlaced'),
         ]);
+    }
+
+    /** The printable leveringsbon, once the order has gone out. */
+    public function deliveryNote(Request $request, Order $order, DeliveryNotes $notes): HttpResponse
+    {
+        abort_unless($order->customer_id === $this->user($request)->customer_id && $order->status === OrderStatus::Delivered, 404);
+
+        return response($notes->render([$order], __('orders.delivery_note.title').' '.$order->number, app()->getLocale()));
     }
 
     /** The date picker: open days with their deadlines, closures to warn about, the minimum. */

@@ -52,6 +52,7 @@ final class Permissions
                     'view' => 'Bestellingen bekijken',
                     'update' => 'Bestellingen behandelen (status, notities, prijzen)',
                     'delete' => 'Bestellingen verwijderen',
+                    'export' => 'Bestellingen exporteren voor de boekhouding',
                     'receive-notifications' => 'E-mail ontvangen bij nieuwe bestellingen',
                 ],
             ],
@@ -61,6 +62,12 @@ final class Permissions
                     'view' => 'Mislukte e-mails bekijken',
                     'retry' => 'Mislukte e-mails opnieuw versturen',
                     'delete' => 'Mislukte e-mails verwijderen',
+                ],
+            ],
+            'settings' => [
+                'label' => 'Instellingen',
+                'abilities' => [
+                    'update' => 'Bedrijfsgegevens bewerken (hoofding van de leveringsbon)',
                 ],
             ],
             'users' => [
