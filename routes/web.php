@@ -35,6 +35,8 @@ Route::prefix('portal')
             Route::post('bestellingen', [OrderController::class, 'store'])->middleware('throttle:10,1')->name('orders.store');
             Route::get('bestellingen', [OrderController::class, 'index'])->name('orders.index');
             Route::get('bestellingen/{order}', [OrderController::class, 'show'])->name('orders.show');
+            Route::put('bestellingen/{order}', [OrderController::class, 'update'])->middleware('throttle:10,1')->name('orders.update');
+            Route::post('bestellingen/{order}/annuleren', [OrderController::class, 'cancel'])->middleware('throttle:10,1')->name('orders.cancel');
 
             Route::get('account', [AccountController::class, 'edit'])->name('account');
             Route::put('account/wachtwoord', [AccountController::class, 'updatePassword'])->name('account.password');

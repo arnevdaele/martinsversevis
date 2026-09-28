@@ -18,6 +18,15 @@ export interface Reorder {
     missing: string[];
 }
 
+export interface EditingOrder extends Reorder {
+    id: number;
+    number: string;
+    deliveryDate: string | null;
+    customerNote: string | null;
+    /** "You can change this until …", or null. */
+    until: string | null;
+}
+
 export interface CatalogueItem {
     id: number;
     priceListId: number;
@@ -49,6 +58,8 @@ export interface OrderSummary {
     total: string;
     itemsCount: number;
     placedBy: string | null;
+    /** The customer may still change or cancel it. */
+    changeable: boolean;
 }
 
 export interface DeliveryOption {

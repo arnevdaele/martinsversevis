@@ -28,6 +28,7 @@ return [
         'unavailable' => 'Dit product is niet meer beschikbaar in jouw prijslijst.',
         'whole' => ':product kan enkel per stuk besteld worden.',
         'minimum' => 'Van :product bestel je minstens :min.',
+        'locked' => 'Deze bestelling kan niet meer gewijzigd worden: ze is al in behandeling of de besteltermijn is voorbij. Neem contact met ons op.',
     ],
     'mail' => [
         'received' => [
@@ -35,11 +36,24 @@ return [
             'heading' => 'Nieuwe bestelling :number',
             'action' => 'Openen in het beheer',
         ],
+        'changed' => [
+            'subject' => 'Bestelling :number gewijzigd — :customer',
+            'heading' => 'Bestelling :number is gewijzigd',
+            'intro' => 'De klant heeft deze bestelling aangepast. Hieronder staan de nieuwe lijnen.',
+        ],
+        'cancelled_by_customer' => [
+            'subject' => 'Bestelling :number geannuleerd door de klant — :customer',
+            'heading' => 'Bestelling :number is geannuleerd',
+            'intro' => 'De klant heeft deze bestelling zelf geannuleerd. Ze hoeft niet meer geleverd te worden.',
+        ],
         'confirmation' => [
             'subject' => 'We hebben je bestelling :number goed ontvangen',
             'heading' => 'Bedankt voor je bestelling',
             'intro' => 'We hebben bestelling :number goed ontvangen en nemen ze zo snel mogelijk in behandeling.',
             'action' => 'Bestelling bekijken',
+            'changed_subject' => 'Je bestelling :number is gewijzigd',
+            'changed_heading' => 'Je wijziging is goed ontvangen',
+            'changed_intro' => 'We hebben de wijziging aan bestelling :number goed ontvangen. Hieronder staat de bestelling zoals ze nu is.',
         ],
         'confirmed' => [
             'subject' => 'Je bestelling :number is bevestigd',

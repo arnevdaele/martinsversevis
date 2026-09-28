@@ -13,13 +13,14 @@ export interface Basket {
 
 const empty: Basket = { lines: {}, notes: {} };
 
-function storageKey(userId: number) {
-    return `mvv.basket.${userId}`;
+// Changing a placed order gets its own scope, so the basket being built for a new order stays untouched.
+function storageKey(userId: number, scope?: string) {
+    return scope ? `mvv.basket.${userId}.${scope}` : `mvv.basket.${userId}`;
 }
 
-function read(userId: number): Basket {
+function read(userId: number, scope?: string): Basket {
     try {
-        const raw = window.localStorage.getItem(storageKey(userId));
+        const raw = window.localStorage.getItem(storageKey(userId, scope));
         if (!raw) return empty;
         const parsed = JSON.parse(raw) as Partial<Basket>;
         return { lines: parsed.lines ?? {}, notes: parsed.notes ?? {} };
@@ -28,12 +29,12 @@ function read(userId: number): Basket {
     }
 }
 
-function write(userId: number, basket: Basket) {
+function write(userId: number, basket: Basket, scope?: string) {
     try {
         if (Object.keys(basket.lines).length === 0) {
-            window.localStorage.removeItem(storageKey(userId));
+            window.localStorage.removeItem(storageKey(userId, scope));
         } else {
-            window.localStorage.setItem(storageKey(userId), JSON.stringify(basket));
+            window.localStorage.setItem(storageKey(userId, scope), JSON.stringify(basket));
         }
     } catch {
         // Private mode or full storage: the basket just won't survive a reload.
@@ -44,9 +45,9 @@ function write(userId: number, basket: Basket) {
  * @param validIds items the customer can order today; anything else is dropped,
  *                 so a product that left a price list never lingers in the basket.
  */
-export function useBasket(userId: number, validIds: Set<number>, initial?: Basket | null) {
+export function useBasket(userId: number, validIds: Set<number>, initial?: Basket | null, scope?: string) {
     const [basket, setBasket] = useState<Basket>(() => {
-        const stored = initial ?? read(userId);
+        const stored = initial ?? read(userId, scope);
         const lines = Object.fromEntries(
             Object.entries(stored.lines)
                 .map(([id, qty]) => [Number(id), qty] as const)
@@ -56,7 +57,7 @@ export function useBasket(userId: number, validIds: Set<number>, initial?: Baske
         return { lines, notes };
     });
 
-    useEffect(() => write(userId, basket), [userId, basket]);
+    useEffect(() => write(userId, basket, scope), [userId, basket, scope]);
 
     const setQuantity = useCallback((id: number, quantity: number) => {
         setBasket((current) => {
@@ -81,6 +82,12 @@ export function useBasket(userId: number, validIds: Set<number>, initial?: Baske
     return { basket, setQuantity, setNote, clear };
 }
 
-export function forgetBasket(userId: number) {
-    write(userId, empty);
+export function forgetBasket(userId: number, scope?: string) {
+    write(userId, empty, scope);
+}
+
+/** What is stored for this scope, or null when nothing is. */
+export function storedBasket(userId: number, scope: string): Basket | null {
+    const basket = read(userId, scope);
+    return Object.keys(basket.lines).length ? basket : null;
 }

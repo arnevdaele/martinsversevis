@@ -28,6 +28,7 @@ return [
         'unavailable' => 'Ce produit n’est plus disponible dans votre liste de prix.',
         'whole' => ':product ne peut être commandé qu’à la pièce.',
         'minimum' => 'Pour :product, commandez au moins :min.',
+        'locked' => 'Cette commande ne peut plus être modifiée : elle est déjà en traitement ou le délai de commande est dépassé. Contactez-nous.',
     ],
     'mail' => [
         'received' => [
@@ -35,11 +36,24 @@ return [
             'heading' => 'Nouvelle commande :number',
             'action' => 'Ouvrir dans la gestion',
         ],
+        'changed' => [
+            'subject' => 'Commande :number modifiée — :customer',
+            'heading' => 'La commande :number a été modifiée',
+            'intro' => 'Le client a modifié cette commande. Voici les nouvelles lignes.',
+        ],
+        'cancelled_by_customer' => [
+            'subject' => 'Commande :number annulée par le client — :customer',
+            'heading' => 'La commande :number est annulée',
+            'intro' => 'Le client a annulé cette commande lui-même. Elle ne doit plus être livrée.',
+        ],
         'confirmation' => [
             'subject' => 'Nous avons bien reçu votre commande :number',
             'heading' => 'Merci pour votre commande',
             'intro' => 'Nous avons bien reçu la commande :number et la traiterons dans les meilleurs délais.',
             'action' => 'Voir la commande',
+            'changed_subject' => 'Votre commande :number a été modifiée',
+            'changed_heading' => 'Nous avons bien reçu votre modification',
+            'changed_intro' => 'Nous avons bien reçu la modification de la commande :number. Voici la commande telle qu’elle est maintenant.',
         ],
         'confirmed' => [
             'subject' => 'Votre commande :number est confirmée',

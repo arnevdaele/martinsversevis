@@ -26,7 +26,7 @@ class FailedJob extends Model
     /** Friendly names for what we queue; anything else shows its class name. */
     public const TYPES = [
         OrderConfirmation::class => 'Orderbevestiging (klant)',
-        OrderReceived::class => 'Nieuwe bestelling (personeel)',
+        OrderReceived::class => 'Nieuwe, gewijzigde of geannuleerde bestelling (personeel)',
         OrderStatusChanged::class => 'Bestelling bevestigd/geannuleerd (klant)',
         CustomerInvitation::class => 'Uitnodiging portaal',
         CustomerResetPassword::class => 'Wachtwoord opnieuw instellen',

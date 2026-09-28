@@ -1,7 +1,7 @@
 <x-mail::message>
-# {{ __('orders.mail.confirmation.heading') }}
+# {{ __($changed ? 'orders.mail.confirmation.changed_heading' : 'orders.mail.confirmation.heading') }}
 
-{{ __('orders.mail.confirmation.intro', ['number' => $order->number]) }}
+{{ __($changed ? 'orders.mail.confirmation.changed_intro' : 'orders.mail.confirmation.intro', ['number' => $order->number]) }}
 
 @if ($order->requested_delivery_date)
 **{{ __('orders.fields.requested_delivery_date') }}:** {{ $order->requested_delivery_date->translatedFormat('l j F Y') }}

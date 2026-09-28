@@ -9,6 +9,7 @@ use App\Models\Order;
 use App\Models\OrderItem;
 use App\Support\DeliveryCalendar;
 use App\Support\Money;
+use App\Support\OrderChanges;
 use App\Support\PortalCatalogue;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -20,28 +21,41 @@ use Inertia\Response;
 class OrderController extends Controller
 {
     /** The order form: the customer's price lists, and optionally a previous order to start from. */
-    public function create(Request $request): Response
+    public function create(Request $request): Response|RedirectResponse
     {
         $user = $this->user($request);
         $catalogue = PortalCatalogue::for($user->customer);
+        $items = collect($catalogue['items']);
+
+        $editing = null;
+        if ($request->filled('edit')) {
+            $order = Order::with('items', 'customer')->where('customer_id', $user->customer_id)->findOrFail($request->integer('edit'));
+
+            if (! OrderChanges::allowed($order)) {
+                return redirect()->route('portal.orders.show', $order)->with('error', __('orders.errors.locked'));
+            }
+
+            $editing = [
+                ...$this->linesFrom($order, $items),
+                'id' => $order->id,
+                'number' => $order->number,
+                'deliveryDate' => $order->requested_delivery_date?->toDateString(),
+                'customerNote' => $order->customer_note,
+                'until' => $this->changeUntil($order, 'portal.order.edit_until'),
+            ];
+        }
 
         return Inertia::render('Order/Create', [
             ...$catalogue,
-            'reorder' => $this->reorderLines($request, $user, collect($catalogue['items'])),
+            'reorder' => $editing ? null : $this->reorderLines($request, $user, $items),
+            'editing' => $editing,
             'delivery' => $this->delivery(DeliveryCalendar::for($user->customer)),
         ]);
     }
 
     public function store(Request $request, PlaceOrder $placeOrder): RedirectResponse
     {
-        $data = $request->validate([
-            'lines' => ['required', 'array', 'min:1', 'max:200'],
-            'lines.*' => ['numeric', 'min:0', 'max:100000'],
-            'notes' => ['nullable', 'array'],
-            'notes.*' => ['nullable', 'string', 'max:255'],
-            'requested_delivery_date' => ['nullable', 'date', 'after_or_equal:today'],
-            'customer_note' => ['nullable', 'string', 'max:2000'],
-        ]);
+        $data = $this->validated($request);
 
         $order = $placeOrder->handle(
             $this->user($request),
@@ -57,11 +71,51 @@ class OrderController extends Controller
             ->with('orderPlaced', true);
     }
 
+    public function update(Request $request, Order $order, PlaceOrder $placeOrder): RedirectResponse
+    {
+        $data = $this->validated($request);
+
+        $order = $placeOrder->update(
+            $order,
+            $this->user($request),
+            $data['lines'],
+            $data['requested_delivery_date'] ?? null,
+            $data['customer_note'] ?? null,
+            $data['notes'] ?? [],
+        );
+
+        return redirect()
+            ->route('portal.orders.show', $order)
+            ->with('success', __('portal.order.changed', ['number' => $order->number]))
+            ->with('orderPlaced', true);
+    }
+
+    public function cancel(Request $request, Order $order, PlaceOrder $placeOrder): RedirectResponse
+    {
+        $placeOrder->cancel($order, $this->user($request));
+
+        return redirect()
+            ->route('portal.orders.show', $order)
+            ->with('success', __('portal.orders.cancelled', ['number' => $order->number]));
+    }
+
+    private function validated(Request $request): array
+    {
+        return $request->validate([
+            'lines' => ['required', 'array', 'min:1', 'max:200'],
+            'lines.*' => ['numeric', 'min:0', 'max:100000'],
+            'notes' => ['nullable', 'array'],
+            'notes.*' => ['nullable', 'string', 'max:255'],
+            'requested_delivery_date' => ['nullable', 'date', 'after_or_equal:today'],
+            'customer_note' => ['nullable', 'string', 'max:2000'],
+        ]);
+    }
+
     public function index(Request $request): Response
     {
         $orders = Order::query()
             ->where('customer_id', $this->user($request)->customer_id)
-            ->with('customerUser')
+            ->with('customerUser', 'customer')
             ->withCount('items')
             ->latest('submitted_at')
             ->paginate(20)
@@ -75,7 +129,7 @@ class OrderController extends Controller
         // Everyone at the same customer shares the order history; nobody else sees it.
         abort_unless($order->customer_id === $this->user($request)->customer_id, 404);
 
-        $order->load('items', 'customerUser');
+        $order->load('items', 'customer', 'customerUser');
 
         return Inertia::render('Orders/Show', [
             'order' => [
@@ -93,6 +147,7 @@ class OrderController extends Controller
                     'lineTotal' => $item->line_total === null ? null : Money::format($item->line_total),
                 ])->all(),
             ],
+            'changeUntil' => $this->changeUntil($order, 'portal.orders.change_until'),
             'justPlaced' => (bool) $request->session()->get('orderPlaced'),
         ]);
     }
@@ -142,6 +197,7 @@ class OrderController extends Controller
             'total' => Money::format($order->total),
             'itemsCount' => $order->items_count ?? $order->items->count(),
             'placedBy' => $order->customerUser?->name,
+            'changeable' => OrderChanges::allowed($order),
         ];
     }
 
@@ -163,30 +219,50 @@ class OrderController extends Controller
 
         $order = Order::with('items')->where('customer_id', $user->customer_id)->find($orderId);
 
-        if (! $order) {
-            return null;
-        }
+        return $order ? $this->linesFrom($order, $items) : null;
+    }
 
-        // Match on product only: today's price may come from a different list.
+    /**
+     * An order's lines as a basket. Match on product only: today's price may
+     * come from a different list.
+     *
+     * @return array{lines: array<int, float>, notes: array<int, string>, missing: list<string>}
+     */
+    private function linesFrom(Order $order, Collection $items): array
+    {
         $available = $items->keyBy('productId');
-        $reorder = ['lines' => [], 'notes' => [], 'missing' => []];
+        $basket = ['lines' => [], 'notes' => [], 'missing' => []];
 
         foreach ($order->items as $orderItem) {
             $item = $available->get($orderItem->product_id);
 
             if (! $item) {
-                $reorder['missing'][] = $orderItem->t('product_name');
+                $basket['missing'][] = $orderItem->t('product_name');
 
                 continue;
             }
 
-            $reorder['lines'][$item['id']] = (float) $orderItem->quantity;
+            $basket['lines'][$item['id']] = (float) $orderItem->quantity;
             if (filled($orderItem->note)) {
-                $reorder['notes'][$item['id']] = $orderItem->note;
+                $basket['notes'][$item['id']] = $orderItem->note;
             }
         }
 
-        return $reorder;
+        return $basket;
+    }
+
+    /** "You can change this until Monday 16:00", or null when that is no longer possible. */
+    private function changeUntil(Order $order, string $key): ?string
+    {
+        if (! OrderChanges::allowed($order)) {
+            return null;
+        }
+
+        $deadline = OrderChanges::deadline($order);
+
+        return $deadline
+            ? __($key, ['deadline' => $deadline->translatedFormat('l j F H:i')])
+            : __($key.'_confirmed');
     }
 
     private function user(Request $request): CustomerUser

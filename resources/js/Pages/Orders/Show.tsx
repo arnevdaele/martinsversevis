@@ -1,4 +1,5 @@
-import { Link } from '@inertiajs/react';
+import { Link, router, usePage } from '@inertiajs/react';
+import { useState } from 'react';
 import StatusBadge from '@/Components/StatusBadge';
 import PortalLayout from '@/Layouts/PortalLayout';
 import { trans, useT } from '@/lib/i18n';
@@ -12,8 +13,22 @@ interface OrderDetail extends OrderSummary {
     items: { id: number; name: string; note: string | null; quantity: string; unitPrice: string | null; lineTotal: string | null }[];
 }
 
-export default function Show({ order }: { order: OrderDetail; justPlaced: boolean }) {
+export default function Show({ order, changeUntil }: { order: OrderDetail; changeUntil: string | null; justPlaced: boolean }) {
     const t = useT();
+    const { errors } = usePage<{ errors: Record<string, string> }>().props;
+    const [confirming, setConfirming] = useState(false);
+    const [cancelling, setCancelling] = useState(false);
+
+    const cancel = () => {
+        setCancelling(true);
+        router.post(`/portal/bestellingen/${order.id}/annuleren`, {}, {
+            preserveScroll: true,
+            onFinish: () => {
+                setCancelling(false);
+                setConfirming(false);
+            },
+        });
+    };
 
     return (
         <PortalLayout title={order.number}>
@@ -32,12 +47,22 @@ export default function Show({ order }: { order: OrderDetail; justPlaced: boolea
                         {order.placedBy && ` · ${trans(t.orders.placed_by, { name: order.placedBy })}`}
                     </p>
                 </div>
+                <div className="flex flex-wrap gap-2">
+                    {changeUntil && (
+                        <Link
+                            href={`/portal?edit=${order.id}`}
+                            className="inline-flex min-h-11 items-center rounded-lg bg-sea-700 px-4 text-sm font-semibold text-white hover:bg-sea-800"
+                        >
+                            {t.orders.change}
+                        </Link>
+                    )}
                 <Link
                     href={`/portal?reorder=${order.id}`}
                     className="inline-flex min-h-11 items-center rounded-lg bg-white px-4 text-sm font-semibold text-slate-800 ring-1 ring-line hover:bg-slate-50"
                 >
                     {t.order.reorder}
                 </Link>
+                </div>
             </div>
 
             <div className="grid items-start gap-6 md:grid-cols-[1fr_280px]">
@@ -71,6 +96,44 @@ export default function Show({ order }: { order: OrderDetail; justPlaced: boolea
                 </div>
 
                 <div className="space-y-4">
+                    {(changeUntil || errors.order) && (
+                        <div className="rounded-xl bg-amber-50 p-4 text-sm text-amber-900 ring-1 ring-amber-200">
+                            {changeUntil && <p>{changeUntil}</p>}
+                            {errors.order && <p className="text-red-700">{errors.order}</p>}
+                            {changeUntil &&
+                                (confirming ? (
+                                    <div className="mt-3" role="group" aria-label={trans(t.orders.cancel_confirm, { number: order.number })}>
+                                        <p className="font-semibold">{trans(t.orders.cancel_confirm, { number: order.number })}</p>
+                                        <div className="mt-2 flex flex-wrap gap-2">
+                                            <button
+                                                type="button"
+                                                onClick={cancel}
+                                                disabled={cancelling}
+                                                className="inline-flex min-h-10 items-center rounded-lg bg-red-600 px-3 font-semibold text-white hover:bg-red-700 disabled:opacity-60"
+                                            >
+                                                {t.orders.cancel_yes}
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => setConfirming(false)}
+                                                autoFocus
+                                                className="inline-flex min-h-10 items-center rounded-lg bg-white px-3 font-semibold text-slate-800 ring-1 ring-line hover:bg-slate-50"
+                                            >
+                                                {t.orders.cancel_no}
+                                            </button>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <button
+                                        type="button"
+                                        onClick={() => setConfirming(true)}
+                                        className="mt-2 font-medium text-red-700 underline underline-offset-2 hover:text-red-800"
+                                    >
+                                        {t.orders.cancel}
+                                    </button>
+                                ))}
+                        </div>
+                    )}
                     <dl className="tabular space-y-1 rounded-xl bg-white p-4 text-sm ring-1 ring-line">
                         <div className="flex justify-between text-slate-600">
                             <dt>{t.order.subtotal}</dt>

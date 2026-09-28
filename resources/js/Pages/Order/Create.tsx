@@ -3,33 +3,38 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import Button from '@/Components/Button';
 import QuantityInput from '@/Components/QuantityInput';
 import PortalLayout from '@/Layouts/PortalLayout';
-import { forgetBasket, useBasket } from '@/lib/basket';
+import { forgetBasket, storedBasket, useBasket } from '@/lib/basket';
 import { choice, trans, useT } from '@/lib/i18n';
 import { formatMoney, formatQuantity } from '@/lib/money';
-import type { CatalogueItem, DeliveryInfo, DeliveryOption, Reorder, SharedProps } from '@/types';
+import type { CatalogueItem, DeliveryInfo, DeliveryOption, EditingOrder, Reorder, SharedProps } from '@/types';
 
 interface Props {
     hasLists: boolean;
     items: CatalogueItem[];
     reorder: Reorder | null;
+    /** Set when the customer is changing a placed order instead of starting a new one. */
+    editing: EditingOrder | null;
     delivery: DeliveryInfo;
 }
 
 type Errors = Record<string, string>;
 
-export default function Create({ hasLists, items, reorder, delivery }: Props) {
+export default function Create({ hasLists, items, reorder, editing, delivery }: Props) {
     const t = useT();
     const { auth } = usePage<SharedProps>().props;
     const userId = auth!.id;
 
     const byId = useMemo(() => new Map(items.map((item) => [item.id, item])), [items]);
     const validIds = useMemo(() => new Set(items.map((item) => item.id)), [items]);
-    const { basket, setQuantity: storeQuantity, setNote, clear } = useBasket(userId, validIds, reorder);
+    const scope = editing ? `order.${editing.id}` : undefined;
+    // Changes survive a reload like a new basket does; otherwise start from the order as placed.
+    const initial = editing ? (storedBasket(userId, scope!) ?? editing) : reorder;
+    const { basket, setQuantity: storeQuantity, setNote, clear } = useBasket(userId, validIds, initial, scope);
 
     const [query, setQuery] = useState('');
     const [category, setCategory] = useState<number | 'all'>('all');
-    const [deliveryDate, setDeliveryDate] = useState('');
-    const [customerNote, setCustomerNote] = useState('');
+    const [deliveryDate, setDeliveryDate] = useState(editing?.deliveryDate ?? '');
+    const [customerNote, setCustomerNote] = useState(editing?.customerNote ?? '');
     const [errors, setErrors] = useState<Errors>({});
     const [processing, setProcessing] = useState(false);
     const [sheetOpen, setSheetOpen] = useState(false);
@@ -105,24 +110,28 @@ export default function Create({ hasLists, items, reorder, delivery }: Props) {
 
     const submit = () => {
         setProcessing(true);
-        router.post(
-            '/portal/bestellingen',
-            {
-                lines: basket.lines,
-                notes: basket.notes,
-                requested_delivery_date: deliveryDate || null,
-                customer_note: customerNote || null,
+        const data = {
+            lines: basket.lines,
+            notes: basket.notes,
+            requested_delivery_date: deliveryDate || null,
+            customer_note: customerNote || null,
+        };
+        router.visit(editing ? `/portal/bestellingen/${editing.id}` : '/portal/bestellingen', {
+            method: editing ? 'put' : 'post',
+            data,
+            preserveScroll: true,
+            onSuccess: () => forgetBasket(userId, scope),
+            onError: (errs) => {
+                setErrors(errs as Errors);
+                setSheetOpen(true);
             },
-            {
-                preserveScroll: true,
-                onSuccess: () => forgetBasket(userId),
-                onError: (errs) => {
-                    setErrors(errs as Errors);
-                    setSheetOpen(true);
-                },
-                onFinish: () => setProcessing(false),
-            },
-        );
+            onFinish: () => setProcessing(false),
+        });
+    };
+
+    const stopEditing = () => {
+        forgetBasket(userId, scope);
+        router.visit(`/portal/bestellingen/${editing!.id}`);
     };
 
     if (!hasLists) {
@@ -145,6 +154,7 @@ export default function Create({ hasLists, items, reorder, delivery }: Props) {
             noDeliveryDays={noDeliveryDays}
             customerNote={customerNote}
             processing={processing}
+            editing={editing !== null}
             onQuantity={setQuantity}
             onNote={setNote}
             onDeliveryDate={setDeliveryDate}
@@ -163,6 +173,25 @@ export default function Create({ hasLists, items, reorder, delivery }: Props) {
                             {t.order.title}
                         </h1>
                         <p className="mt-1 text-[15px] text-slate-600">{t.order.intro}</p>
+                        {editing && (
+                            <div
+                                className="mt-4 flex flex-wrap items-center justify-between gap-x-4 gap-y-2 rounded-lg bg-amber-50 px-4 py-3 text-sm text-amber-900 ring-1 ring-amber-200"
+                                role="status"
+                            >
+                                <div>
+                                    <p className="font-semibold">{trans(t.order.editing, { number: editing.number })}</p>
+                                    {editing.until && <p className="mt-0.5">{editing.until}</p>}
+                                    {editing.missing.length > 0 && (
+                                        <p className="mt-1.5">
+                                            {choice(t.order.reordered_missing, editing.missing.length, { products: editing.missing.join(', ') })}
+                                        </p>
+                                    )}
+                                </div>
+                                <button type="button" onClick={stopEditing} className="font-medium text-amber-900 underline underline-offset-2 hover:text-amber-700">
+                                    {t.order.edit_stop}
+                                </button>
+                            </div>
+                        )}
                         {reorder && (Object.keys(reorder.lines).length > 0 || reorder.missing.length > 0) && (
                             <div className="mt-4 rounded-lg bg-sea-50 px-4 py-3 text-sm text-sea-900 ring-1 ring-sea-200" role="status">
                                 {Object.keys(reorder.lines).length > 0 && <p>{t.order.reordered}</p>}
@@ -351,6 +380,7 @@ function BasketPanel(props: {
     noDeliveryDays: boolean;
     customerNote: string;
     processing: boolean;
+    editing: boolean;
     onQuantity: (id: number, qty: number) => void;
     onNote: (id: number, note: string) => void;
     onDeliveryDate: (value: string) => void;
@@ -472,13 +502,20 @@ function BasketPanel(props: {
             </dl>
 
             <div className="border-t border-line p-4">
+                {errors.order && <p className="mb-3 text-sm text-red-600">{errors.order}</p>}
                 {errors.lines && <p className="mb-3 text-sm text-red-600">{errors.lines}</p>}
                 <Button
                     className="w-full"
                     onClick={props.onSubmit}
                     disabled={!lines.length || props.processing || props.belowMinimum || props.noDeliveryDays}
                 >
-                    {props.processing ? t.order.submitting : t.order.submit}
+                    {props.editing
+                        ? props.processing
+                            ? t.order.saving
+                            : t.order.save
+                        : props.processing
+                          ? t.order.submitting
+                          : t.order.submit}
                 </Button>
             </div>
         </div>

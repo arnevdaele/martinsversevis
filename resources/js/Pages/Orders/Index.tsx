@@ -35,6 +35,7 @@ export default function Index({ orders }: { orders: Paginated<OrderSummary> }) {
                                 <span className="font-semibold text-slate-900">{order.number}</span>
                                 <span className="text-right sm:order-last">
                                     <StatusBadge status={order.status} label={order.statusLabel} />
+                                    {order.changeable && <span className="mt-0.5 block text-xs text-amber-700">{t.orders.changeable}</span>}
                                 </span>
                                 <span className="text-sm text-slate-600">
                                     {order.submittedAt}

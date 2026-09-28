@@ -17,14 +17,14 @@ class OrderConfirmation extends Mailable implements ShouldQueue
 {
     use Queueable, RespectsMailQuota, SerializesModels;
 
-    public function __construct(public Order $order) {}
+    public function __construct(public Order $order, public bool $changed = false) {}
 
     public function envelope(): Envelope
     {
         $replyTo = config('mail.customer_reply_to');
 
         return new Envelope(
-            subject: __('orders.mail.confirmation.subject', ['number' => $this->order->number]),
+            subject: __($this->changed ? 'orders.mail.confirmation.changed_subject' : 'orders.mail.confirmation.subject', ['number' => $this->order->number]),
             replyTo: filled($replyTo['address']) ? [new Address($replyTo['address'], $replyTo['name'])] : [],
         );
     }
@@ -33,6 +33,7 @@ class OrderConfirmation extends Mailable implements ShouldQueue
     {
         return new Content(markdown: 'mail.order-confirmation', with: [
             'order' => $this->order->loadMissing('items', 'customer', 'customerUser'),
+            'changed' => $this->changed,
             'url' => route('portal.orders.show', $this->order),
         ]);
     }

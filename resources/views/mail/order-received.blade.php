@@ -1,6 +1,10 @@
 <x-mail::message>
-# {{ __('orders.mail.received.heading', ['number' => $order->number]) }}
+# {{ __("orders.mail.{$event}.heading", ['number' => $order->number]) }}
 
+@if ($event !== 'received')
+{{ __("orders.mail.{$event}.intro") }}
+
+@endif
 **{{ __('orders.fields.customer') }}:** {{ $order->customer->name }} ({{ $order->customer->type->name }})
 @if ($order->customerUser)
 **{{ __('orders.fields.placed_by') }}:** {{ $order->customerUser->name }} — {{ $order->customerUser->email }}
@@ -18,7 +22,9 @@
 </x-mail::panel>
 @endif
 
+@if ($event !== 'cancelled_by_customer')
 @include('mail._order-lines')
+@endif
 
 <x-mail::button :url="$url">
 {{ __('orders.mail.received.action') }}

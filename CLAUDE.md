@@ -80,6 +80,11 @@ policy. The role and user forms are generated from that list (`PermissionMatrix`
   lists + their own lists, filtered by `PriceList::currentlyValid()`).
 - `PlaceOrder` is the only way an order is created. The portal only sends
   price list item ids + quantities; everything else is looked up again.
+- Customers change or cancel their own order via `PlaceOrder::update()` /
+  `cancel()`, only while `OrderChanges::allowed()`: status New and the
+  `DeliveryCalendar` deadline for its date not passed. An update rewrites the
+  lines but keeps prices staff already filled in for day-price products. Staff
+  get `OrderReceived` with event `PLACED` / `CHANGED` / `CANCELLED`.
 - Order items **snapshot** name, unit, price and VAT. Editing the catalogue
   never rewrites an order. After changing items call `$order->recalculate()`.
 - Order numbers are `YYYY-NNNNNN` from max()+1; a collision on the unique
@@ -139,7 +144,16 @@ production only (`QUEUE_HEALTH_CHECKS`), since `php artisan dev` runs no schedul
   handle `:placeholders` and `{1}|[2,*]` plurals.
 - The basket lives in localStorage per portal login (`lib/basket.ts`), keyed by
   price list item id, and is pruned against what the customer can order today.
+  Editing an order (`/portal?edit={id}`) uses a separate basket, scoped `order.{id}`.
 - Mobile first: the people ordering are often in a kitchen with a phone.
+
+## Admin dashboard
+
+Widgets in `app/Filament/Widgets` (auto-discovered, lazy-loaded, so tests use
+`assertSeeLivewire`): `OrdersOverview` stats, `OrdersNeedingAttention` table and
+`RegularCustomersMissing`, backed by `RegularCustomers::missing()` (ordered in
+at least 4 of the last 8 weeks, usually by this point of the week, not yet this
+week). All scoped with `visibleTo()` and hidden without `orders.view`.
 
 ## Filament gotchas
 
