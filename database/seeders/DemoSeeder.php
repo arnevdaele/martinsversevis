@@ -10,12 +10,10 @@ use App\Models\DeliveryException;
 use App\Models\DeliverySchedule;
 use App\Models\PriceList;
 use App\Models\Product;
-use App\Models\ProductCategory;
 use App\Models\User;
 use App\Support\Permissions;
 use Carbon\Carbon;
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Str;
 
 /**
  * Local demo data: `php artisan db:seed --class=DemoSeeder`. Never run in production.
@@ -81,30 +79,30 @@ class DemoSeeder extends Seeder
         $sales->syncRoles(['Verkoop']);
         $sales->customerTypes()->sync([$horeca->id]);
 
-        $categoryNames = [
-            'Vis' => 'Poissons',
-            'Schaal- en schelpdieren' => 'Crustacés et coquillages',
-            'Bereid' => 'Préparations',
-        ];
+        $this->call(ProductSeeder::class);
 
-        // [name, French name, unit, origin, business, horeca, private]
-        $catalogue = [
-            'Vis' => [
-                ['Kabeljauwfilet', 'Filet de cabillaud', Unit::Kilogram, 'Noorwegen', 24.50, 21.90, 27.50],
-                ['Zalmfilet', 'Filet de saumon', Unit::Kilogram, 'Schotland', 22.00, 19.80, 25.90],
-                ['Tarbot, heel', 'Turbot entier', Unit::Kilogram, 'Noordzee', null, null, null],
-                ['Zeetong', 'Sole', Unit::Kilogram, 'Noordzee', 39.00, 35.00, 44.00],
-                ['Tongschar', 'Limande-sole', Unit::Piece, 'Noordzee', 6.50, 5.80, 7.20],
-            ],
-            'Schaal- en schelpdieren' => [
-                ['Noordzeegarnalen, gepeld', 'Crevettes grises décortiquées', Unit::Kilogram, 'Zeebrugge', 48.00, 44.00, 54.00],
-                ['Mosselen Zeeuwse', 'Moules de Zélande', Unit::Kilogram, 'Zeeland', 5.20, 4.60, 6.50],
-                ['Oesters Fines de Claire n°3', 'Huîtres Fines de Claire n°3', Unit::Box, 'Frankrijk', 19.50, 17.00, 22.00],
-            ],
-            'Bereid' => [
-                ['Vispannetje', 'Cassolette de poisson', Unit::Portion, null, 9.50, 8.50, 11.00],
-                ['Gerookte zalm, gesneden', 'Saumon fumé tranché', Unit::Kilogram, 'Schotland', 42.00, 38.00, 47.00],
-            ],
+        // Product slug => [business, horeca, private]; null is a day price.
+        $prices = [
+            'kabeljauwfilet' => [24.50, 21.90, 27.50],
+            'zalmfilet' => [22.00, 19.80, 25.90],
+            'tarbot-heel' => [null, null, null],
+            'zeetong' => [39.00, 35.00, 44.00],
+            'tongschar' => [6.50, 5.80, 7.20],
+            'zeebaarsfilet' => [29.00, 26.50, 32.50],
+            'heekfilet' => [17.50, 15.90, 19.90],
+            'roggevleugel' => [18.00, 16.20, 21.00],
+            'tonijnsteak' => [34.00, 30.50, 38.50],
+            'makreel-heel' => [3.20, 2.80, 3.90],
+            'noordzeegarnalen-gepeld' => [48.00, 44.00, 54.00],
+            'mosselen-zeeuwse' => [5.20, 4.60, 6.50],
+            'oesters-fines-de-claire-n3' => [19.50, 17.00, 22.00],
+            'sint-jakobsvruchten' => [52.00, 47.00, 58.00],
+            'kreeft-levend' => [null, null, null],
+            'langoustines' => [45.00, 41.00, 49.50],
+            'vispannetje' => [9.50, 8.50, 11.00],
+            'gerookte-zalm-gesneden' => [42.00, 38.00, 47.00],
+            'vissoep' => [8.50, 7.50, 9.90],
+            'garnaalkroketten' => [2.40, 2.10, 2.80],
         ];
 
         $lists = [
@@ -125,33 +123,13 @@ class DemoSeeder extends Seeder
         $lists['horeca']->customerTypes()->syncWithoutDetaching([$horeca->id]);
         $lists['private']->customerTypes()->syncWithoutDetaching([$private->id]);
 
-        $sort = 0;
-        foreach ($catalogue as $categoryName => $products) {
-            $category = ProductCategory::firstOrCreate(['slug' => Str::slug($categoryName)], [
-                'name' => $categoryName,
-                'translations' => ['fr' => ['name' => $categoryNames[$categoryName]]],
-                'sort_order' => $sort,
-            ]);
-
-            foreach ($products as [$name, $frenchName, $unit, $origin, $businessPrice, $horecaPrice, $privatePrice]) {
-                $product = Product::firstOrCreate(['slug' => Str::slug($name)], [
-                    'name' => $name,
-                    'translations' => ['fr' => ['name' => $frenchName]],
-                    'product_category_id' => $category->id,
-                    'sku' => strtoupper(Str::substr(Str::slug($name, ''), 0, 6)).'-'.(++$sort),
-                    'unit' => $unit,
-                    'origin' => $origin,
-                    'vat_rate' => 6,
-                    'sort_order' => $sort,
+        foreach (Product::whereIn('slug', array_keys($prices))->get() as $product) {
+            foreach (array_combine(['business', 'horeca', 'private'], $prices[$product->slug]) as $key => $price) {
+                $lists[$key]->items()->firstOrCreate(['product_id' => $product->id], [
+                    'price' => $price,
+                    'min_quantity' => $key === 'horeca' && $product->unit === Unit::Kilogram ? 2 : null,
+                    'sort_order' => $product->sort_order,
                 ]);
-
-                foreach (['business' => $businessPrice, 'horeca' => $horecaPrice, 'private' => $privatePrice] as $key => $price) {
-                    $lists[$key]->items()->firstOrCreate(['product_id' => $product->id], [
-                        'price' => $price,
-                        'min_quantity' => $key === 'horeca' && $unit === Unit::Kilogram ? 2 : null,
-                        'sort_order' => $sort,
-                    ]);
-                }
             }
         }
 
