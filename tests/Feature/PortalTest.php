@@ -8,11 +8,15 @@ use App\Models\CustomerUser;
 use App\Models\Order;
 use App\Models\PriceList;
 use App\Models\Product;
+use App\Models\User;
 use App\Notifications\CustomerInvitation;
 use App\Notifications\CustomerResetPassword;
+use Filament\Auth\Pages\Login;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Notification;
 use Inertia\Testing\AssertableInertia as Assert;
+use Livewire\Livewire;
 use Tests\TestCase;
 
 class PortalTest extends TestCase
@@ -32,6 +36,26 @@ class PortalTest extends TestCase
 
         $this->assertAuthenticatedAs($user, 'customer');
         $this->assertNotNull($user->fresh()->last_login_at);
+    }
+
+    public function test_logging_in_ignores_an_intended_url_from_the_other_area(): void
+    {
+        $user = CustomerUser::factory()->create();
+
+        // Opening /admin as a guest stores it as the intended URL in the shared session.
+        $this->get('/admin')->assertRedirect('/admin/login');
+        $this->post('/portal/login', ['email' => $user->email, 'password' => 'secret-password'])->assertRedirect('/portal');
+
+        Auth::guard('customer')->logout();
+        $this->get('/portal/bestellingen')->assertRedirect('/portal/login');
+        $this->post('/portal/login', ['email' => $user->email, 'password' => 'secret-password'])->assertRedirect('/portal/bestellingen');
+
+        $staff = User::factory()->create(['password' => 'secret-password']);
+        session(['url.intended' => url('/portal/bestellingen')]);
+        Livewire::test(Login::class)
+            ->fillForm(['email' => $staff->email, 'password' => 'secret-password'])
+            ->call('authenticate')
+            ->assertRedirect('/admin');
     }
 
     public function test_a_staff_session_is_not_a_portal_session(): void

@@ -2,10 +2,12 @@
 
 namespace App\Providers;
 
+use App\Http\Responses\AdminLoginResponse;
 use App\Models\CustomerUser;
 use App\Models\User;
 use App\Policies\RolePolicy;
 use App\Support\Permissions;
+use Filament\Auth\Http\Responses\Contracts\LoginResponse;
 use Illuminate\Auth\Events\Login;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Database\Eloquent\Model;
@@ -20,7 +22,7 @@ class AppServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
-        //
+        $this->app->bind(LoginResponse::class, AdminLoginResponse::class);
     }
 
     public function boot(): void
