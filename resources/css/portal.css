@@ -27,6 +27,8 @@
 @layer base {
     html {
         -webkit-tap-highlight-color: transparent;
+        /* Short and long pages keep the same width, with or without a scrollbar. */
+        scrollbar-gutter: stable;
     }
 
     body {

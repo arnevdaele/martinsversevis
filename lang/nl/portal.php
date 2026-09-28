@@ -15,6 +15,7 @@ return [
         'vat' => 'Btw',
         'address' => 'Adres',
         'pagination' => 'Paginering',
+        'account_menu' => 'Accountmenu',
     ],
     'nav' => [
         'order' => 'Bestellen',

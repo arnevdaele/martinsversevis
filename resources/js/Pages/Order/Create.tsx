@@ -133,7 +133,7 @@ export default function Create({ hasLists, items, reorder, delivery }: Props) {
     );
 
     return (
-        <PortalLayout title={t.order.title} wide>
+        <PortalLayout title={t.order.title}>
             <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_380px]">
                 <section aria-labelledby="catalogue-title" className="min-w-0">
                     <div className="mb-5">

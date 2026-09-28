@@ -1,5 +1,6 @@
-import { Head, Link, router, usePage } from '@inertiajs/react';
+import { Head, Link, usePage } from '@inertiajs/react';
 import type { ReactNode } from 'react';
+import AccountMenu from '@/Components/AccountMenu';
 import Flash from '@/Components/Flash';
 import LanguageSwitch from '@/Components/LanguageSwitch';
 import Logo from '@/Components/Logo';
@@ -7,8 +8,11 @@ import { useT } from '@/lib/i18n';
 import { setMoneyLocale } from '@/lib/money';
 import type { SharedProps } from '@/types';
 
-export default function PortalLayout({ title, children, wide = false }: { title: string; children: ReactNode; wide?: boolean }) {
-    const { auth, locale } = usePage<SharedProps>().props;
+/** One width for the bar and every page, so nothing shifts when you switch tabs. */
+const container = 'mx-auto max-w-7xl px-4 sm:px-6';
+
+export default function PortalLayout({ title, children }: { title: string; children: ReactNode }) {
+    const { locale } = usePage<SharedProps>().props;
     setMoneyLocale(locale);
     const url = usePage().url;
     const t = useT();
@@ -23,7 +27,7 @@ export default function PortalLayout({ title, children, wide = false }: { title:
         <div className="min-h-dvh">
             <Head title={title} />
             <header className="sticky top-0 z-30 border-b border-white/10 bg-sea-900 text-white">
-                <div className={`mx-auto flex h-16 items-center gap-6 px-4 sm:px-6 ${wide ? 'max-w-7xl' : 'max-w-5xl'}`}>
+                <div className={`${container} flex h-16 items-center gap-6`}>
                     <Link href="/portal" className="shrink-0">
                         <Logo inverted />
                     </Link>
@@ -43,21 +47,10 @@ export default function PortalLayout({ title, children, wide = false }: { title:
                         ))}
                     </nav>
 
-                    <div className="ml-auto flex items-center gap-3">
+                    <div className="ml-auto flex items-center gap-2 sm:gap-3">
                         <LanguageSwitch inverted />
-                        {auth && (
-                            <div className="hidden text-right leading-tight sm:block">
-                                <div className="text-sm font-semibold">{auth.customer}</div>
-                                <div className="text-xs text-sea-100/70">{auth.name}</div>
-                            </div>
-                        )}
-                        <button
-                            type="button"
-                            onClick={() => router.post('/portal/logout')}
-                            className="rounded-md px-3 py-2 text-sm font-medium text-sea-100/80 hover:bg-white/8 hover:text-white"
-                        >
-                            {t.nav.logout}
-                        </button>
+                        <span className="hidden h-6 w-px bg-white/15 sm:block" aria-hidden="true" />
+                        <AccountMenu />
                     </div>
                 </div>
 
@@ -78,7 +71,7 @@ export default function PortalLayout({ title, children, wide = false }: { title:
                 </nav>
             </header>
 
-            <main className={`mx-auto px-4 py-6 sm:px-6 sm:py-8 ${wide ? 'max-w-7xl' : 'max-w-5xl'}`}>
+            <main className={`${container} py-6 sm:py-8`}>
                 <Flash />
                 {children}
             </main>

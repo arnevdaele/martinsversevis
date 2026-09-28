@@ -10,7 +10,11 @@ export default function LanguageSwitch({ inverted = false }: { inverted?: boolea
     if (locales.length < 2) return null;
 
     return (
-        <div role="group" aria-label={t.common.language} className="flex items-center gap-0.5">
+        <div
+            role="group"
+            aria-label={t.common.language}
+            className={`flex items-center gap-0.5 ${inverted ? 'rounded-lg bg-white/5 p-0.5 ring-1 ring-white/10' : ''}`}
+        >
             {locales.map((option) => {
                 const active = option.code === locale;
                 return (
@@ -21,7 +25,7 @@ export default function LanguageSwitch({ inverted = false }: { inverted?: boolea
                         title={option.label}
                         aria-pressed={active}
                         onClick={() => !active && router.post(`/portal/taal/${option.code}`, {}, { preserveScroll: true })}
-                        className={`rounded px-2 py-1 text-xs font-semibold tracking-wide uppercase transition-colors ${
+                        className={`rounded-md px-2 py-1 text-xs font-semibold tracking-wide uppercase transition-colors ${
                             inverted
                                 ? active
                                     ? 'bg-white/15 text-white'

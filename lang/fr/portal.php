@@ -16,6 +16,7 @@ return [
         'vat' => 'TVA',
         'address' => 'Adresse',
         'pagination' => 'Pagination',
+        'account_menu' => 'Menu du compte',
     ],
     'nav' => [
         'order' => 'Commander',
