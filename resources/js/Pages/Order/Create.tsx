@@ -1,5 +1,5 @@
 import { router, usePage } from '@inertiajs/react';
-import { useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import Button from '@/Components/Button';
 import QuantityInput from '@/Components/QuantityInput';
 import PortalLayout from '@/Layouts/PortalLayout';
@@ -33,6 +33,23 @@ export default function Create({ hasLists, items, reorder, delivery }: Props) {
     const [errors, setErrors] = useState<Errors>({});
     const [processing, setProcessing] = useState(false);
     const [sheetOpen, setSheetOpen] = useState(false);
+    const search = useRef<HTMLInputElement>(null);
+
+    // "/" (when not already typing) or Ctrl/Cmd+K jumps to the product search.
+    useEffect(() => {
+        const onKey = (event: KeyboardEvent) => {
+            const target = event.target as HTMLElement;
+            const typing = target.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName);
+            const slash = event.key === '/' && !typing && !event.ctrlKey && !event.metaKey && !event.altKey;
+            const modK = event.key.toLowerCase() === 'k' && (event.ctrlKey || event.metaKey);
+            if (!slash && !modK) return;
+            event.preventDefault();
+            search.current?.focus();
+            search.current?.select();
+        };
+        document.addEventListener('keydown', onKey);
+        return () => document.removeEventListener('keydown', onKey);
+    }, []);
 
     // Touching a line clears the server's complaint about it.
     const setQuantity = (id: number, quantity: number) => {
@@ -148,14 +165,31 @@ export default function Create({ hasLists, items, reorder, delivery }: Props) {
 
 
                     <div className="sticky top-[6.5rem] z-20 -mx-4 mb-5 bg-canvas/95 px-4 pb-3 pt-1 backdrop-blur md:top-16 sm:-mx-6 sm:px-6">
-                        <input
-                            type="search"
-                            value={query}
-                            onChange={(e) => setQuery(e.target.value)}
-                            placeholder={t.order.search}
-                            aria-label={t.order.search}
-                            className="block h-11 w-full rounded-lg border border-slate-300 bg-white px-3 text-[15px] shadow-xs focus:border-sea-500 focus:ring-2 focus:ring-sea-100 focus:outline-none"
-                        />
+                        <div className="relative">
+                            <input
+                                ref={search}
+                                type="search"
+                                value={query}
+                                onChange={(e) => setQuery(e.target.value)}
+                                onKeyDown={(e) => {
+                                    if (e.key !== 'Escape') return;
+                                    if (query) setQuery('');
+                                    else e.currentTarget.blur();
+                                }}
+                                placeholder={t.order.search}
+                                aria-label={t.order.search}
+                                aria-keyshortcuts="/ Control+K Meta+K"
+                                className="peer block h-11 w-full rounded-lg border border-slate-300 bg-white px-3 text-[15px] shadow-xs focus:border-sea-500 focus:ring-2 focus:ring-sea-100 focus:outline-none md:pr-10"
+                            />
+                            {!query && (
+                                <kbd
+                                    aria-hidden="true"
+                                    className="pointer-events-none absolute top-1/2 right-3 hidden -translate-y-1/2 rounded border border-slate-300 bg-slate-50 px-1.5 font-sans text-xs text-slate-500 peer-focus:hidden md:block"
+                                >
+                                    /
+                                </kbd>
+                            )}
+                        </div>
                         {categories.length > 1 && (
                             <div className="-mx-1 mt-3 flex gap-2 overflow-x-auto px-1 pb-1 [scrollbar-width:none]" role="group" aria-label={t.common.category}>
                                 <Chip active={category === 'all'} onClick={() => setCategory('all')}>
