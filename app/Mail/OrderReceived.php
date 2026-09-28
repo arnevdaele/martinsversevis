@@ -4,6 +4,7 @@ namespace App\Mail;
 
 use App\Mail\Concerns\RespectsMailQuota;
 use App\Models\Order;
+use App\Support\OrderHistory;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Mail\Mailable;
@@ -26,7 +27,8 @@ class OrderReceived extends Mailable implements ShouldQueue
 
     public const CANCELLED = 'cancelled_by_customer';
 
-    public function __construct(public Order $order, public string $event = self::PLACED) {}
+    /** @param  list<array<string, mixed>>  $changes  from {@see OrderHistory::diff()}, for a changed order */
+    public function __construct(public Order $order, public string $event = self::PLACED, public array $changes = []) {}
 
     public function envelope(): Envelope
     {
@@ -46,6 +48,7 @@ class OrderReceived extends Mailable implements ShouldQueue
         return new Content(markdown: 'mail.order-received', with: [
             'order' => $this->order->loadMissing('items', 'customer.type', 'customerUser'),
             'event' => $this->event,
+            'changeLines' => array_map(OrderHistory::describe(...), $this->changes),
             'url' => route('filament.admin.resources.orders.view', ['record' => $this->order]),
         ]);
     }

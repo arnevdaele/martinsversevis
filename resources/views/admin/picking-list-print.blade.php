@@ -23,6 +23,7 @@
         .qty { font-weight: 700; font-size: 12pt; }
         .tick { width: 8mm; }
         .tick span { display: inline-block; width: 4mm; height: 4mm; border: 1px solid #111; }
+        .weighed { width: 22mm; border-bottom: 1px dotted #999; }
         .small { font-size: 9pt; color: #555; }
         .note { border: 1px solid #111; padding: 2mm 3mm; margin: 3mm 0; }
         .sheet { break-before: page; page-break-before: always; margin-top: 10mm; padding-top: 6mm; border-top: 2px dashed #bbb; }
@@ -84,13 +85,14 @@
 
             <table>
                 <thead>
-                    <tr><th class="tick"></th><th class="num">Hoeveelheid</th><th>Product</th><th>Opmerking</th></tr>
+                    <tr><th class="tick"></th><th class="num">Besteld</th><th class="num">Geleverd</th><th>Product</th><th>Opmerking</th></tr>
                 </thead>
                 <tbody>
                     @foreach ($order->items as $item)
                         <tr>
                             <td class="tick"><span></span></td>
                             <td class="num qty">{{ Money::quantity($item->quantity, $item->unit, 'nl') }}</td>
+                            <td class="num weighed">{{ $item->delivered_quantity === null ? '' : Money::quantity($item->delivered_quantity, $item->unit, 'nl') }}</td>
                             <td>{{ $item->product_name }}</td>
                             <td class="small">{{ $item->note }}</td>
                         </tr>

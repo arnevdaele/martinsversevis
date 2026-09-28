@@ -1,4 +1,5 @@
 @php
+    use App\Actions\WeighOrderItem;
     use App\Enums\OrderStatus;
     use App\Filament\Resources\Orders\OrderResource;
     use App\Support\Money;
@@ -7,10 +8,11 @@
 <x-filament-panels::page>
     {{-- No custom admin theme, so this page brings its own few rules. --}}
     <style>
-        .pl-bar { display: flex; flex-wrap: wrap; align-items: end; gap: 1rem 1.5rem; }
-        .pl-bar label { display: grid; gap: .25rem; font-size: .875rem; font-weight: 500; }
-        .pl-bar input { border-radius: .5rem; border: 1px solid var(--gray-300); padding: .4rem .6rem; background: transparent; color: inherit; }
-        .dark .pl-bar input { border-color: var(--gray-700); color-scheme: dark; }
+        .pl-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 1rem 1.5rem; }
+        .pl-date { width: 16rem; max-width: 100%; }
+        .pl-weigh { display: inline-flex; align-items: center; gap: .25rem; white-space: nowrap; }
+        .pl-weigh input { width: 5rem; text-align: right; border-radius: .5rem; border: 1px solid var(--gray-300); padding: .25rem .5rem; background: transparent; color: inherit; font-variant-numeric: tabular-nums; }
+        .dark .pl-weigh input { border-color: var(--gray-700); }
         .pl-stat { font-size: .875rem; color: var(--gray-500); }
         .pl-stat strong { font-size: 1.25rem; color: var(--gray-950); margin-right: .25rem; }
         .dark .pl-stat strong { color: #fff; }
@@ -32,10 +34,7 @@
     </style>
 
     <div class="pl-bar">
-        <label>
-            Leverdag
-            <input type="date" wire:model.live="date">
-        </label>
+        <div class="pl-date">{{ $this->form }}</div>
         <span class="pl-stat"><strong>{{ $list->orders->count() }}</strong> bestelling(en)</span>
         <span class="pl-stat"><strong>{{ $list->orders->pluck('customer_id')->unique()->count() }}</strong> klant(en)</span>
     </div>
@@ -105,13 +104,27 @@
                             <div class="pl-note"><strong>Opmerking klant:</strong> {{ $order->customer_note }}</div>
                         @endif
 
+                        @php($canWeigh = auth()->user()->can('update', $order))
                         <table class="pl-table pl-items">
                             @foreach ($order->items as $item)
-                                <tr>
+                                <tr wire:key="item-{{ $item->id }}">
                                     <td class="pl-num pl-qty" style="width: 6rem;">{{ Money::quantity($item->quantity, $item->unit, 'nl') }}</td>
                                     <td>
                                         {{ $item->product_name }}
                                         @if ($item->note)<div class="pl-muted">{{ $item->note }}</div>@endif
+                                    </td>
+                                    <td class="pl-num">
+                                        @if ($canWeigh)
+                                            <label class="pl-weigh" title="Gewogen / geleverd; leeg = zoals besteld">
+                                                <input type="text" inputmode="decimal" aria-label="Geleverd {{ $item->product_name }}"
+                                                    value="{{ WeighOrderItem::format($item->delivered_quantity) }}"
+                                                    placeholder="{{ WeighOrderItem::format($item->quantity) }}"
+                                                    wire:change="weigh({{ $item->id }}, $event.target.value)">
+                                                <span class="pl-muted">{{ $item->unit->short() }}</span>
+                                            </label>
+                                        @elseif ($item->delivered_quantity !== null)
+                                            <span class="pl-muted">geleverd {{ Money::quantity($item->delivered_quantity, $item->unit, 'nl') }}</span>
+                                        @endif
                                     </td>
                                 </tr>
                             @endforeach

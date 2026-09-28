@@ -8,7 +8,7 @@
 | {{ __('orders.fields.product') }} | {{ __('orders.fields.quantity') }} | {{ __('orders.fields.unit_price') }} | {{ __('orders.fields.line_total') }} |
 |:--|--:|--:|--:|
 @foreach ($order->items as $item)
-| {{ $cell($item->t('product_name').($item->note ? ' — '.$item->note : '')) }} | {{ Money::quantity($item->quantity, $item->unit) }} | {{ $item->unit_price === null ? __('orders.day_price') : Money::format($item->unit_price) }} | {{ $item->line_total === null ? '—' : Money::format($item->line_total) }} |
+| {{ $cell($item->t('product_name').($item->note ? ' — '.$item->note : '')) }} | {{ Money::quantity($item->billedQuantity(), $item->unit) }}{{ $item->deliveredDiffers() ? ' ('.__('orders.ordered', ['quantity' => Money::quantity($item->quantity, $item->unit)]).')' : '' }} | {{ $item->unit_price === null ? __('orders.day_price') : Money::format($item->unit_price) }} | {{ $item->line_total === null ? '—' : Money::format($item->line_total) }} |
 @endforeach
 </x-mail::table>
 

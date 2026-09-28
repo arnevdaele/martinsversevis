@@ -8,12 +8,15 @@ use App\Mail\OrderReceived;
 use App\Models\Customer;
 use App\Models\CustomerUser;
 use App\Models\Order;
+use App\Models\OrderEvent;
+use App\Models\OrderItem;
 use App\Models\PriceListItem;
 use App\Support\CustomerPrices;
 use App\Support\DeliveryCalendar;
 use App\Support\Locales;
 use App\Support\Money;
 use App\Support\OrderChanges;
+use App\Support\OrderHistory;
 use App\Support\OrderRecipients;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Collection;
@@ -44,6 +47,7 @@ class PlaceOrder
         $this->checkDelivery($customer, $lines, $items, $requestedDeliveryDate);
 
         $order = $this->create($author, $lines, $items, $requestedDeliveryDate, $customerNote, $notes);
+        OrderHistory::record($order, OrderEvent::PLACED, $author);
 
         $this->notify($order, OrderReceived::PLACED);
 
@@ -53,7 +57,8 @@ class PlaceOrder
     /**
      * The customer changes their own order: same checks as a new one, and only
      * while {@see OrderChanges} allows it. Lines are replaced wholesale, at
-     * today's prices; a day price staff already filled in is kept.
+     * today's prices; a day price staff already filled in is kept, and so is a
+     * weighed quantity on a line whose quantity didn't change.
      *
      * @param  array<int|string, float|int|string>  $lines
      * @param  array<int|string, string|null>  $notes
@@ -65,19 +70,25 @@ class PlaceOrder
         [$lines, $items] = $this->validLines($author->customer, $lines);
         $this->checkDelivery($author->customer, $lines, $items, $requestedDeliveryDate);
 
-        DB::transaction(function () use ($order, $author, $lines, $items, $requestedDeliveryDate, $customerNote, $notes) {
+        $changes = DB::transaction(function () use ($order, $author, $lines, $items, $requestedDeliveryDate, $customerNote, $notes) {
             // Staff may be confirming this very order right now; whoever locks first wins.
             $this->ensureChangeable(Order::lockForUpdate()->findOrFail($order->id), $author);
 
-            $staffPrices = $order->items()->whereNotNull('unit_price')->pluck('unit_price', 'product_id');
+            $before = OrderHistory::snapshot($order);
+            $old = $order->items()->get()->keyBy('product_id');
             $order->items()->delete();
             $order->update(['requested_delivery_date' => $requestedDeliveryDate, 'customer_note' => $customerNote]);
-            $this->writeItems($order, $lines, $items, $notes, $staffPrices->all());
+            $this->writeItems($order, $lines, $items, $notes, $old);
             $order->unsetRelation('items')->recalculate();
+
+            $changes = OrderHistory::diff($before, OrderHistory::snapshot($order));
+            OrderHistory::record($order, OrderEvent::CHANGED, $author, $changes);
+
+            return $changes;
         });
 
         $order->refresh();
-        $this->notify($order, OrderReceived::CHANGED);
+        $this->notify($order, OrderReceived::CHANGED, $changes);
 
         return $order;
     }
@@ -88,6 +99,7 @@ class PlaceOrder
         DB::transaction(function () use ($order, $author) {
             $this->ensureChangeable(Order::lockForUpdate()->findOrFail($order->id), $author);
             $order->update(['status' => OrderStatus::Cancelled]);
+            OrderHistory::record($order, OrderEvent::CANCELLED, $author);
         });
 
         foreach (OrderRecipients::for($order) as $address) {
@@ -214,16 +226,17 @@ class PlaceOrder
     }
 
     /**
-     * Snapshots every line. `$keepPrices` (product_id => price) holds day
-     * prices staff already filled in on an order being changed.
+     * Snapshots every line. `$previous` (by product_id) are the lines of an
+     * order being changed: staff's day prices and weights carry over.
      *
-     * @param  array<int, string>  $keepPrices
+     * @param  Collection<int, OrderItem>|null  $previous
      */
-    private function writeItems(Order $order, array $lines, Collection $items, array $notes, array $keepPrices = []): void
+    private function writeItems(Order $order, array $lines, Collection $items, array $notes, ?Collection $previous = null): void
     {
         foreach ($lines as $itemId => $quantity) {
             /** @var PriceListItem $item */
             $item = $items->get($itemId);
+            $old = $previous?->get($item->product_id);
 
             $order->items()->create([
                 'product_id' => $item->product_id,
@@ -232,19 +245,20 @@ class PlaceOrder
                 'translations' => $item->product->translationsOf('name', as: 'product_name') ?: null,
                 'sku' => $item->product->sku,
                 'unit' => $item->product->unit,
-                'unit_price' => $item->price ?? $keepPrices[$item->product_id] ?? null,
+                'unit_price' => $item->price ?? $old?->unit_price,
                 'vat_rate' => $item->product->vat_rate,
                 'quantity' => $quantity,
+                'delivered_quantity' => $old && (float) $old->quantity === (float) $quantity ? $old->delivered_quantity : null,
                 'note' => filled($notes[$itemId] ?? null) ? mb_substr($notes[$itemId], 0, 255) : null,
             ]);
         }
     }
 
-    private function notify(Order $order, string $event): void
+    private function notify(Order $order, string $event, array $changes = []): void
     {
         // Staff work in the base language, whatever the customer ordered in.
         foreach (OrderRecipients::for($order) as $address) {
-            Mail::to($address)->locale(Locales::default())->queue(new OrderReceived($order, $event));
+            Mail::to($address)->locale(Locales::default())->queue(new OrderReceived($order, $event, $changes));
         }
 
         $author = $order->customerUser;

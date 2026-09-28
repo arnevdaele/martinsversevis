@@ -10,9 +10,11 @@ use Filament\Forms\Components\DatePicker;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\Filter;
+use Filament\Tables\Filters\Indicator;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Carbon;
 
 class OrdersTable
 {
@@ -61,7 +63,11 @@ class OrdersTable
                     ])
                     ->query(fn (Builder $query, array $data) => $query
                         ->when($data['from'] ?? null, fn (Builder $q, $d) => $q->whereDate('requested_delivery_date', '>=', $d))
-                        ->when($data['until'] ?? null, fn (Builder $q, $d) => $q->whereDate('requested_delivery_date', '<=', $d))),
+                        ->when($data['until'] ?? null, fn (Builder $q, $d) => $q->whereDate('requested_delivery_date', '<=', $d)))
+                    ->indicateUsing(fn (array $data) => array_values(array_filter([
+                        filled($data['from'] ?? null) ? Indicator::make('Levering vanaf '.Carbon::parse($data['from'])->format('d/m/Y'))->removeField('from') : null,
+                        filled($data['until'] ?? null) ? Indicator::make('Levering tot en met '.Carbon::parse($data['until'])->format('d/m/Y'))->removeField('until') : null,
+                    ]))),
             ])
             ->recordActions([ViewAction::make()])
             ->emptyStateHeading('Nog geen bestellingen')

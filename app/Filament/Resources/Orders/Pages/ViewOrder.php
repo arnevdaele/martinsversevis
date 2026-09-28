@@ -5,6 +5,7 @@ namespace App\Filament\Resources\Orders\Pages;
 use App\Actions\ChangeOrderStatus;
 use App\Enums\OrderStatus;
 use App\Filament\Resources\Orders\OrderResource;
+use App\Filament\Resources\Orders\Widgets\OrderHistory;
 use App\Models\Order;
 use Filament\Actions\Action;
 use Filament\Actions\ActionGroup;
@@ -31,6 +32,11 @@ class ViewOrder extends ViewRecord
     public function refreshTotals(): void
     {
         $this->record->refresh();
+    }
+
+    protected function getFooterWidgets(): array
+    {
+        return [OrderHistory::class];
     }
 
     protected function getHeaderActions(): array
@@ -80,6 +86,7 @@ class ViewOrder extends ViewRecord
             ->action(function (Order $record, array $data) use ($to) {
                 $sent = app(ChangeOrderStatus::class)->handle($record, $to, auth()->user(), (bool) ($data['notify'] ?? false), $data['note'] ?? null);
                 $this->refreshFormData(['status', 'handled_by']);
+                $this->dispatch('refresh-order-totals');
 
                 Notification::make()
                     ->success()

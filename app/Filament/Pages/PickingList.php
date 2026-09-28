@@ -2,18 +2,24 @@
 
 namespace App\Filament\Pages;
 
+use App\Actions\WeighOrderItem;
 use App\Models\Order;
+use App\Models\OrderItem;
 use App\Support\PickingList as Day;
 use BackedEnum;
 use Carbon\CarbonImmutable;
 use Filament\Actions\Action;
+use Filament\Forms\Components\DatePicker;
+use Filament\Notifications\Notification;
 use Filament\Pages\Page;
+use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
+use Illuminate\Validation\ValidationException;
 use Livewire\Attributes\Url;
 use Throwable;
 use UnitEnum;
 
-/** What to buy and what to pack for one delivery day. */
+/** What to buy and what to pack for one delivery day, and what it weighed. */
 class PickingList extends Page
 {
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedClipboardDocumentList;
@@ -33,6 +39,9 @@ class PickingList extends Page
     #[Url]
     public ?string $date = null;
 
+    /** The date picker's own state; Filament keeps a time in it, the URL gets just the day. */
+    public ?array $picker = [];
+
     public static function canAccess(): bool
     {
         return auth()->user()?->can('viewAny', Order::class) ?? false;
@@ -40,7 +49,30 @@ class PickingList extends Page
 
     public function mount(): void
     {
-        $this->date = $this->day()->toDateString();
+        $this->show($this->day());
+    }
+
+    public function form(Schema $schema): Schema
+    {
+        return $schema->components([
+            DatePicker::make('date')
+                ->label('Leverdag')
+                ->hiddenLabel()
+                ->prefix('Leverdag')
+                ->closeOnDateSelection()
+                ->live()
+                ->afterStateUpdated(fn (?string $state) => $this->date = $state ? CarbonImmutable::parse($state)->toDateString() : null),
+        ])->statePath('picker');
+    }
+
+    private function show(?CarbonImmutable $day): void
+    {
+        if ($day === null) {
+            return;
+        }
+
+        $this->date = $day->toDateString();
+        $this->form->fill(['date' => $this->date]);
     }
 
     public function day(): CarbonImmutable
@@ -50,6 +82,26 @@ class PickingList extends Page
         } catch (Throwable) {
             return Day::nextDate(auth()->user());
         }
+    }
+
+    /** Staff type what a line actually weighed, right in the packing list. */
+    public function weigh(int $itemId, ?string $value): void
+    {
+        $item = OrderItem::query()
+            ->whereHas('order', fn ($query) => $query->visibleTo(auth()->user()))
+            ->findOrFail($itemId);
+
+        abort_unless(auth()->user()->can('update', $item->order), 403);
+
+        try {
+            app(WeighOrderItem::class)->handle($item, $value, auth()->user());
+        } catch (ValidationException $e) {
+            Notification::make()->danger()->title($e->getMessage())->send();
+
+            return;
+        }
+
+        Notification::make()->success()->title("Gewicht opgeslagen: {$item->product_name}")->send();
     }
 
     public function getSubheading(): string
@@ -70,7 +122,7 @@ class PickingList extends Page
                 ->color('gray')
                 ->tooltip($previous ? 'Vorige leverdag met bestellingen' : 'Geen eerdere bestellingen')
                 ->disabled($previous === null)
-                ->action(fn () => $this->date = $previous?->toDateString()),
+                ->action(fn () => $this->show($previous)),
             Action::make('next')
                 ->label('Volgende')
                 ->icon(Heroicon::ChevronRight)
@@ -78,7 +130,7 @@ class PickingList extends Page
                 ->color('gray')
                 ->tooltip($next ? 'Volgende leverdag met bestellingen' : 'Geen latere bestellingen')
                 ->disabled($next === null)
-                ->action(fn () => $this->date = $next?->toDateString()),
+                ->action(fn () => $this->show($next)),
             Action::make('print')
                 ->label('Afdrukken')
                 ->icon(Heroicon::OutlinedPrinter)

@@ -5,7 +5,9 @@ namespace App\Actions;
 use App\Enums\OrderStatus;
 use App\Mail\OrderStatusChanged;
 use App\Models\Order;
+use App\Models\OrderEvent;
 use App\Models\User;
+use App\Support\OrderHistory;
 use Illuminate\Support\Facades\Mail;
 
 /**
@@ -25,14 +27,30 @@ class ChangeOrderStatus
     /** @return bool whether a mail went out */
     public function handle(Order $order, OrderStatus $to, User $by, bool $notify = false, ?string $note = null): bool
     {
+        $from = $order->status;
         $order->update(['status' => $to, 'handled_by' => $order->handled_by ?? $by->id]);
 
-        if (! $notify || ! self::canNotify($order, $to)) {
+        $notify = $notify && self::canNotify($order, $to);
+        $note = filled($note) ? trim($note) : null;
+
+        $changes = [['field' => 'status', 'from' => $from?->value, 'to' => $to->value]];
+
+        if ($notify) {
+            $changes[] = ['field' => 'notified'];
+
+            if ($note !== null) {
+                $changes[] = ['field' => 'message', 'to' => $note];
+            }
+        }
+
+        OrderHistory::record($order, OrderEvent::STATUS, $by, $changes);
+
+        if (! $notify) {
             return false;
         }
 
         // Passing the model (not the address) picks up the customer's language.
-        Mail::to($order->customerUser)->queue(new OrderStatusChanged($order, filled($note) ? trim($note) : null));
+        Mail::to($order->customerUser)->queue(new OrderStatusChanged($order, $note));
 
         return true;
     }

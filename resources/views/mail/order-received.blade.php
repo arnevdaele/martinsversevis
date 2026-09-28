@@ -22,6 +22,14 @@
 </x-mail::panel>
 @endif
 
+@if ($changeLines !== [])
+**{{ __('orders.mail.changed.changes') }}**
+
+@foreach ($changeLines as $change)
+- {{ $change }}
+@endforeach
+
+@endif
 @if ($event !== 'cancelled_by_customer')
 @include('mail._order-lines')
 @endif

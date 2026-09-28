@@ -101,6 +101,19 @@ policy. The role and user forms are generated from that list (`PermissionMatrix`
   per delivery day, the totals per product (purchase list) and every order (packing),
   cancelled orders left out and scoped with `visibleTo()`. The print version is a
   plain Blade page at `/admin/dagoverzicht/afdrukken`, registered via `authenticatedRoutes`.
+- **Weights**: `order_items.delivered_quantity` is what actually went out (null = as
+  ordered). `OrderItem::billedQuantity()` drives `line_total`, mails and the portal.
+  Staff enter it on the order's items table or the Dagoverzicht, both through
+  `WeighOrderItem` (accepts `2,35` or `2.35`). A customer changing an order keeps a
+  line's weight only when its ordered quantity didn't change. Round money with
+  `Money::cents()`, not `round()`: 21,90 × 2,15 is the float 47.08499….
+- **History**: every change to an order records an `OrderEvent` via
+  `OrderHistory::record()` (`snapshot()` before/after + `diff()`, or `lineDiff()`).
+  The column is `details`, never `changes` (clashes with Eloquent's `$changes`).
+  Line edits by the same staff member within 15 minutes merge into one entry, and
+  an entry that nets out to nothing is dropped. Anything new that touches an order
+  should record too. Shown by the `OrderHistory` widget on the order page; a
+  customer's change also lists the diff in the staff mail.
 - Money is formatted on the server (`App\Support\Money`, Belgian notation).
   The portal basket computes an estimate client-side with `Intl` pinned to nl-BE.
 
@@ -167,6 +180,10 @@ week). All scoped with `visibleTo()` and hidden without `orders.view`.
   `replicate()` such a record straight into a save.
 - Eloquent `Collection::only()` filters by model key **and re-indexes** —
   after `keyBy()` use `get()`/`filter()`, not `only()`.
+- Dates are Dutch everywhere by default (`AppServiceProvider::configureAdminDates`:
+  `d/m/Y`, non-native pickers, Monday first). A non-native `DatePicker` keeps
+  `Y-m-d H:i:s` as its state, so don't bind it straight to a `Y-m-d` URL property
+  (see the separate `picker` statePath on `PickingList`).
 - `AdminFormsTest` opens and submits every form. Add new forms there, because
   a page loading fine says nothing about its modals.
 

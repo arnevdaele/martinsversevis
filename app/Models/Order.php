@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Actions\PlaceOrder;
 use App\Enums\OrderStatus;
+use App\Support\Money;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
@@ -51,6 +52,11 @@ class Order extends Model
         return $this->hasMany(OrderItem::class);
     }
 
+    public function events(): HasMany
+    {
+        return $this->hasMany(OrderEvent::class)->latest('id');
+    }
+
     public function scopeVisibleTo(Builder $query, User $user): void
     {
         $ids = $user->visibleCustomerTypeIds();
@@ -91,7 +97,7 @@ class Order extends Model
                 continue;
             }
             $subtotal += (float) $item->line_total;
-            $vat += round((float) $item->line_total * (float) $item->vat_rate / 100, 2);
+            $vat += Money::cents((float) $item->line_total * (float) $item->vat_rate / 100);
         }
 
         $this->forceFill([

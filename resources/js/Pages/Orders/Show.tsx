@@ -10,7 +10,7 @@ interface OrderDetail extends OrderSummary {
     subtotal: string;
     vatTotal: string;
     hasUnpricedItems: boolean;
-    items: { id: number; name: string; note: string | null; quantity: string; unitPrice: string | null; lineTotal: string | null }[];
+    items: { id: number; name: string; note: string | null; quantity: string; ordered: string | null; unitPrice: string | null; lineTotal: string | null }[];
 }
 
 export default function Show({ order, changeUntil }: { order: OrderDetail; changeUntil: string | null; justPlaced: boolean }) {
@@ -84,7 +84,10 @@ export default function Show({ order, changeUntil }: { order: OrderDetail; chang
                                         <div className="font-medium text-slate-900">{item.name}</div>
                                         {item.note && <div className="text-slate-500">{item.note}</div>}
                                     </td>
-                                    <td className="px-4 py-3 text-right whitespace-nowrap">{item.quantity}</td>
+                                    <td className="px-4 py-3 text-right whitespace-nowrap">
+                                        {item.quantity}
+                                        {item.ordered && <div className="text-xs text-slate-500">{item.ordered}</div>}
+                                    </td>
                                     <td className="hidden px-4 py-3 text-right whitespace-nowrap text-slate-600 sm:table-cell">
                                         {item.unitPrice ?? t.order.day_price}
                                     </td>

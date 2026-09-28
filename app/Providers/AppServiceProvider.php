@@ -8,6 +8,9 @@ use App\Models\User;
 use App\Policies\RolePolicy;
 use App\Support\Permissions;
 use Filament\Auth\Http\Responses\Contracts\LoginResponse;
+use Filament\Forms\Components\DateTimePicker;
+use Filament\Schemas\Schema;
+use Filament\Tables\Table;
 use Illuminate\Auth\Events\Login;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Database\Eloquent\Model;
@@ -48,10 +51,35 @@ class AppServiceProvider extends ServiceProvider
         // See App\Mail\Concerns\RespectsMailQuota. Kept under the provider's cap for headroom.
         RateLimiter::for('outgoing-mail', fn () => Limit::perHour((int) config('mail.hourly_limit')));
 
+        $this->configureAdminDates();
+
         Event::listen(Login::class, function (Login $event) {
             if ($event->user instanceof User || $event->user instanceof CustomerUser) {
                 $event->user->forceFill(['last_login_at' => now()])->saveQuietly();
             }
         });
+    }
+
+    /**
+     * Dutch dates in the admin: 28/09/2026, weeks from Monday. The browser's own
+     * date input follows the computer's language (often English, mm/dd/yyyy),
+     * so pickers use Filament's calendar instead. Applies to DatePicker too.
+     */
+    private function configureAdminDates(): void
+    {
+        DateTimePicker::configureUsing(fn (DateTimePicker $picker) => $picker
+            ->native(false)
+            ->firstDayOfWeek(1)
+            ->defaultDateDisplayFormat('d/m/Y')
+            ->defaultDateTimeDisplayFormat('d/m/Y H:i')
+            ->defaultDateTimeWithSecondsDisplayFormat('d/m/Y H:i:s'));
+
+        Table::configureUsing(fn (Table $table) => $table
+            ->defaultDateDisplayFormat('d/m/Y')
+            ->defaultDateTimeDisplayFormat('d/m/Y H:i'));
+
+        Schema::configureUsing(fn (Schema $schema) => $schema
+            ->defaultDateDisplayFormat('d/m/Y')
+            ->defaultDateTimeDisplayFormat('d/m/Y H:i'));
     }
 }

@@ -13,6 +13,15 @@ final class Money
 {
     private const NARROW_NBSP = "\u{202F}";
 
+    /**
+     * Round to cents the way a person would: 21,90 × 2,15 = 47,085 → 47,09.
+     * Plain round() sees the float 47.08499… and rounds down.
+     */
+    public static function cents(float $amount): float
+    {
+        return round((float) sprintf('%.6F', $amount), 2);
+    }
+
     public static function format(float|string|null $amount, ?string $locale = null): string
     {
         if ($amount === null) {
