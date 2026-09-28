@@ -101,6 +101,40 @@ class PortalTest extends TestCase
         $this->assertSame('25.00', $order->subtotal);
     }
 
+    public function test_order_again_fills_the_basket_with_todays_items_and_names_what_is_gone(): void
+    {
+        Mail::fake();
+        $user = CustomerUser::factory()->create();
+        $list = PriceList::factory()->create();
+        $list->customerTypes()->attach($user->customer->customer_type_id);
+        $cod = $list->items()->create(['product_id' => Product::factory()->create()->id, 'price' => 12.5]);
+        $gone = $list->items()->create(['product_id' => Product::factory()->create(['name' => 'Tarbot'])->id, 'price' => 30]);
+
+        $this->actingAs($user, 'customer')->post('/portal/bestellingen', [
+            'lines' => [$cod->id => '2', $gone->id => '1'],
+            'notes' => [$cod->id => 'zonder vel'],
+        ]);
+        $order = Order::firstOrFail();
+
+        // Turbot leaves the list; cod moves to another list the customer gets.
+        $gone->delete();
+        $cod->delete();
+        $newList = PriceList::factory()->create();
+        $newList->customers()->attach($user->customer);
+        $newCod = $newList->items()->create(['product_id' => $cod->product_id, 'price' => 13]);
+
+        $this->get("/portal?reorder={$order->id}")
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('reorder.lines', [$newCod->id => 2])
+                ->where('reorder.notes', [$newCod->id => 'zonder vel'])
+                ->where('reorder.missing', ['Tarbot']));
+
+        // Someone else's order number gives nothing away.
+        $this->actingAs(CustomerUser::factory()->create(), 'customer')
+            ->get("/portal?reorder={$order->id}")
+            ->assertInertia(fn (Assert $page) => $page->where('reorder', null));
+    }
+
     public function test_colleagues_share_order_history_but_others_do_not(): void
     {
         $user = CustomerUser::factory()->create();

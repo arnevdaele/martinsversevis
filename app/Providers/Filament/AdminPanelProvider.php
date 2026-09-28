@@ -2,6 +2,7 @@
 
 namespace App\Providers\Filament;
 
+use App\Support\BackgroundHealth;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
@@ -13,6 +14,7 @@ use Filament\PanelProvider;
 use Filament\Support\Colors\Color;
 use Filament\Support\Enums\Width;
 use Filament\Support\Icons\Heroicon;
+use Filament\View\PanelsRenderHook;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
@@ -47,6 +49,12 @@ class AdminPanelProvider extends PanelProvider
                     ->group('Beheer')
                     ->sort(99),
             ])
+            // Mails silently stop when a background container does; say so where staff look.
+            ->renderHook(PanelsRenderHook::CONTENT_START, function () {
+                $problems = auth()->user()?->can('failed-mails.view') ? BackgroundHealth::problems() : [];
+
+                return $problems ? view('filament.background-health', ['problems' => $problems]) : '';
+            })
             ->colors([
                 // Sea-blue, matching the portal.
                 'primary' => Color::hex('#0f5f7a'),

@@ -86,6 +86,7 @@ return [
         'placed' => 'Merci ! Votre commande :number a été envoyée.',
         'reorder' => 'Commander à nouveau',
         'reordered' => 'Les produits de cette commande sont dans votre panier. Vérifiez les quantités et envoyez.',
+        'reordered_missing' => '{1} Plus disponible, donc pas repris : :products.|[2,*] Plus disponibles, donc pas repris (:count) : :products.',
         'show_basket' => 'Voir la commande',
     ],
     'orders' => [

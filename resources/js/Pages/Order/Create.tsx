@@ -6,12 +6,12 @@ import PortalLayout from '@/Layouts/PortalLayout';
 import { forgetBasket, useBasket } from '@/lib/basket';
 import { choice, trans, useT } from '@/lib/i18n';
 import { formatMoney, formatQuantity } from '@/lib/money';
-import type { CatalogueItem, DeliveryInfo, DeliveryOption, SharedProps } from '@/types';
+import type { CatalogueItem, DeliveryInfo, DeliveryOption, Reorder, SharedProps } from '@/types';
 
 interface Props {
     hasLists: boolean;
     items: CatalogueItem[];
-    reorder: Record<number, number> | null;
+    reorder: Reorder | null;
     delivery: DeliveryInfo;
 }
 
@@ -34,6 +34,11 @@ export default function Create({ hasLists, items, reorder, delivery }: Props) {
     const [processing, setProcessing] = useState(false);
     const [sheetOpen, setSheetOpen] = useState(false);
     const search = useRef<HTMLInputElement>(null);
+
+    // The reorder is in the basket now; drop it from the address so a reload keeps later edits.
+    useEffect(() => {
+        if (reorder) router.replace({ url: '/portal', preserveState: true, preserveScroll: true });
+    }, [reorder]);
 
     // "/" (when not already typing) or Ctrl/Cmd+K jumps to the product search.
     useEffect(() => {
@@ -158,8 +163,15 @@ export default function Create({ hasLists, items, reorder, delivery }: Props) {
                             {t.order.title}
                         </h1>
                         <p className="mt-1 text-[15px] text-slate-600">{t.order.intro}</p>
-                        {reorder && Object.keys(reorder).length > 0 && (
-                            <p className="mt-4 rounded-lg bg-sea-50 px-4 py-3 text-sm text-sea-900 ring-1 ring-sea-200">{t.order.reordered}</p>
+                        {reorder && (Object.keys(reorder.lines).length > 0 || reorder.missing.length > 0) && (
+                            <div className="mt-4 rounded-lg bg-sea-50 px-4 py-3 text-sm text-sea-900 ring-1 ring-sea-200" role="status">
+                                {Object.keys(reorder.lines).length > 0 && <p>{t.order.reordered}</p>}
+                                {reorder.missing.length > 0 && (
+                                    <p className={Object.keys(reorder.lines).length > 0 ? 'mt-1.5 text-amber-800' : 'text-amber-800'}>
+                                        {choice(t.order.reordered_missing, reorder.missing.length, { products: reorder.missing.join(', ') })}
+                                    </p>
+                                )}
+                            </div>
                         )}
                     </div>
 

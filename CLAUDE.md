@@ -119,6 +119,11 @@ Mails that still fail land in `failed_jobs`, shown under Beheer › Mislukte e-m
 `FailedJob::recipient()` / `order()` read the queued payload, so a new mailable with
 an order or a new notifiable may need a line there, and a name in `FailedJob::TYPES`.
 
+If the queue or scheduler container stops, nothing fails, mails just wait. `BackgroundHealth`
+keeps heartbeats (scheduler every minute, a `QueueHeartbeat` job every 5) and the admin
+shows a red warning to staff with `failed-mails.view` when one is overdue. On in
+production only (`QUEUE_HEALTH_CHECKS`), since `php artisan dev` runs no scheduler.
+
 ## Portal front-end
 
 - `lang/{locale}/portal.php` is shared whole as the `t` prop. Never hardcode visible

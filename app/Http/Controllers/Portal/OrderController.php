@@ -147,9 +147,11 @@ class OrderController extends Controller
 
     /**
      * "Order again": map the old order's products onto what the customer can
-     * order today. Products no longer on offer are silently dropped.
+     * order today, notes included. Products no longer on offer are named, so
+     * the customer knows to look for a replacement. Lines and notes are keyed
+     * by price list item id, like the basket.
      *
-     * @return array<int, float>|null price_list_item_id => quantity
+     * @return array{lines: array<int, float>, notes: array<int, string>, missing: list<string>}|null
      */
     private function reorderLines(Request $request, CustomerUser $user, Collection $items): ?array
     {
@@ -166,16 +168,25 @@ class OrderController extends Controller
         }
 
         // Match on product only: today's price may come from a different list.
-        $quantities = $order->items->pluck('quantity', 'product_id');
+        $available = $items->keyBy('productId');
+        $reorder = ['lines' => [], 'notes' => [], 'missing' => []];
 
-        $lines = [];
-        foreach ($items as $item) {
-            if ($quantities->has($item['productId'])) {
-                $lines[$item['id']] = (float) $quantities[$item['productId']];
+        foreach ($order->items as $orderItem) {
+            $item = $available->get($orderItem->product_id);
+
+            if (! $item) {
+                $reorder['missing'][] = $orderItem->t('product_name');
+
+                continue;
+            }
+
+            $reorder['lines'][$item['id']] = (float) $orderItem->quantity;
+            if (filled($orderItem->note)) {
+                $reorder['notes'][$item['id']] = $orderItem->note;
             }
         }
 
-        return $lines;
+        return $reorder;
     }
 
     private function user(Request $request): CustomerUser

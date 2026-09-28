@@ -11,6 +11,13 @@ export interface SharedProps {
     [key: string]: unknown;
 }
 
+/** "Order again": a previous order mapped onto today's items, plus what could not be. */
+export interface Reorder {
+    lines: Record<number, number>;
+    notes: Record<number, string>;
+    missing: string[];
+}
+
 export interface CatalogueItem {
     id: number;
     priceListId: number;

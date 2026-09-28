@@ -85,6 +85,7 @@ return [
         'placed' => 'Bedankt! Je bestelling :number is verstuurd.',
         'reorder' => 'Opnieuw bestellen',
         'reordered' => 'De producten uit deze bestelling staan in je mandje. Controleer de hoeveelheden en verstuur.',
+        'reordered_missing' => '{1} Niet meer te bestellen en dus niet overgenomen: :products.|[2,*] Niet meer te bestellen en dus niet overgenomen (:count): :products.',
         'show_basket' => 'Bekijk bestelling',
     ],
     'orders' => [

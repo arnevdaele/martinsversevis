@@ -44,9 +44,9 @@ function write(userId: number, basket: Basket) {
  * @param validIds items the customer can order today; anything else is dropped,
  *                 so a product that left a price list never lingers in the basket.
  */
-export function useBasket(userId: number, validIds: Set<number>, initial?: Record<number, number> | null) {
+export function useBasket(userId: number, validIds: Set<number>, initial?: Basket | null) {
     const [basket, setBasket] = useState<Basket>(() => {
-        const stored = initial ? { lines: initial, notes: {} } : read(userId);
+        const stored = initial ?? read(userId);
         const lines = Object.fromEntries(
             Object.entries(stored.lines)
                 .map(([id, qty]) => [Number(id), qty] as const)

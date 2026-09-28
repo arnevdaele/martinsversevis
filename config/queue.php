@@ -126,4 +126,11 @@ return [
         'table' => 'failed_jobs',
     ],
 
+    /*
+    | Warn in the admin when the scheduler or queue worker stops (App\Support\BackgroundHealth).
+    | Off outside production: `php artisan dev` runs no scheduler.
+    */
+
+    'health_checks' => (bool) env('QUEUE_HEALTH_CHECKS', env('APP_ENV') === 'production'),
+
 ];
