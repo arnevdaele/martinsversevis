@@ -111,7 +111,7 @@ return [
         'new_password' => 'Nouveau mot de passe',
         'save' => 'Enregistrer',
         'saved' => 'Votre mot de passe a été modifié.',
-        'confirmations' => 'M’envoyer une confirmation par e-mail pour chaque commande',
+        'confirmations' => 'M’envoyer un e-mail pour chaque commande, et quand elle est confirmée ou annulée',
         'language' => 'Langue du portail et des e-mails',
         'preferences_saved' => 'Préférences enregistrées.',
         'contact' => 'Vous souhaitez modifier vos coordonnées ? Contactez-nous.',

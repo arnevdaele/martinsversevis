@@ -41,5 +41,15 @@ return [
             'intro' => 'We hebben bestelling :number goed ontvangen en nemen ze zo snel mogelijk in behandeling.',
             'action' => 'Bestelling bekijken',
         ],
+        'confirmed' => [
+            'subject' => 'Je bestelling :number is bevestigd',
+            'heading' => 'Je bestelling is bevestigd',
+            'intro' => 'We hebben bestelling :number bevestigd. Hieronder staan de definitieve lijnen en prijzen.',
+        ],
+        'cancelled' => [
+            'subject' => 'Je bestelling :number is geannuleerd',
+            'heading' => 'Je bestelling is geannuleerd',
+            'intro' => 'Bestelling :number is geannuleerd en wordt niet geleverd. Heb je vragen? Antwoord gerust op deze e-mail.',
+        ],
     ],
 ];

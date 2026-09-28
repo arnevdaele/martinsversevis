@@ -41,5 +41,15 @@ return [
             'intro' => 'Nous avons bien reçu la commande :number et la traiterons dans les meilleurs délais.',
             'action' => 'Voir la commande',
         ],
+        'confirmed' => [
+            'subject' => 'Votre commande :number est confirmée',
+            'heading' => 'Votre commande est confirmée',
+            'intro' => 'Nous avons confirmé la commande :number. Vous trouverez ci-dessous les lignes et les prix définitifs.',
+        ],
+        'cancelled' => [
+            'subject' => 'Votre commande :number est annulée',
+            'heading' => 'Votre commande est annulée',
+            'intro' => 'La commande :number est annulée et ne sera pas livrée. Une question ? N’hésitez pas à répondre à cet e-mail.',
+        ],
     ],
 ];

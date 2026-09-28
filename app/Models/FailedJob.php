@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Mail\OrderConfirmation;
 use App\Mail\OrderReceived;
+use App\Mail\OrderStatusChanged;
 use App\Notifications\CustomerInvitation;
 use App\Notifications\CustomerResetPassword;
 use Illuminate\Database\Eloquent\Model;
@@ -26,6 +27,7 @@ class FailedJob extends Model
     public const TYPES = [
         OrderConfirmation::class => 'Orderbevestiging (klant)',
         OrderReceived::class => 'Nieuwe bestelling (personeel)',
+        OrderStatusChanged::class => 'Bestelling bevestigd/geannuleerd (klant)',
         CustomerInvitation::class => 'Uitnodiging portaal',
         CustomerResetPassword::class => 'Wachtwoord opnieuw instellen',
     ];

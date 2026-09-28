@@ -35,7 +35,7 @@ class AdminAccessTest extends TestCase
             '/admin/customer-types', '/admin/products', '/admin/product-categories', '/admin/price-lists', '/admin/price-lists/create',
             '/admin/price-lists/1', '/admin/price-lists/1/settings', '/admin/users', '/admin/users/create', '/admin/roles', '/admin/roles/create',
             '/admin/delivery-schedules', '/admin/delivery-schedules/create', '/admin/delivery-schedules/1/edit', '/admin/delivery-exceptions',
-            '/admin/products', '/admin/customer-types', '/admin/failed-jobs',
+            '/admin/products', '/admin/customer-types', '/admin/failed-jobs', '/admin/dagoverzicht',
         ];
 
         foreach ($pages as $page) {

@@ -60,7 +60,7 @@ class UsersRelationManager extends RelationManager
                     ->helperText('Taal van de uitnodiging, het portaal en de e-mails.'),
                 Toggle::make('is_active')->label('Actief')->default(true),
                 Toggle::make('receives_order_confirmations')
-                    ->label('Bevestiging per e-mail bij elke bestelling')
+                    ->label('E-mail bij elke bestelling en bij bevestigen of annuleren')
                     ->default(true),
             ]);
     }

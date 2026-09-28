@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Actions\PlaceOrder;
 use App\Mail\OrderConfirmation;
 use App\Mail\OrderReceived;
+use App\Mail\OrderStatusChanged;
 use App\Models\Customer;
 use App\Models\CustomerUser;
 use App\Models\Order;
@@ -155,6 +156,7 @@ class LocalisationTest extends TestCase
         foreach ([
             new OrderReceived(new Order),
             new OrderConfirmation(new Order),
+            new OrderStatusChanged(new Order),
             new CustomerInvitation('x'),
             new CustomerResetPassword('x'),
         ] as $mail) {

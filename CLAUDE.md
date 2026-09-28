@@ -88,6 +88,14 @@ policy. The role and user forms are generated from that list (`PermissionMatrix`
   `orders.receive-notifications` who may see the customer's type, plus the
   type's `notification_emails`. Super admins get them only if given that
   permission directly (Extra rechten on their user).
+- Status changes from the order page go through `ChangeOrderStatus`. Confirming or
+  cancelling asks whether to mail the customer (`OrderStatusChanged`, with the final
+  lines and an optional message); the toggle defaults to the login's
+  `receives_order_confirmations`. The edit form's status field never mails.
+- **Dagoverzicht** (`Filament\Pages\PickingList`, data in `App\Support\PickingList`):
+  per delivery day, the totals per product (purchase list) and every order (packing),
+  cancelled orders left out and scoped with `visibleTo()`. The print version is a
+  plain Blade page at `/admin/dagoverzicht/afdrukken`, registered via `authenticatedRoutes`.
 - Money is formatted on the server (`App\Support\Money`, Belgian notation).
   The portal basket computes an estimate client-side with `Intl` pinned to nl-BE.
 

@@ -110,7 +110,7 @@ return [
         'new_password' => 'Nieuw wachtwoord',
         'save' => 'Opslaan',
         'saved' => 'Je wachtwoord is gewijzigd.',
-        'confirmations' => 'Stuur mij een bevestiging per e-mail bij elke bestelling',
+        'confirmations' => 'Mail mij bij elke bestelling, en wanneer ze bevestigd of geannuleerd wordt',
         'language' => 'Taal van het portaal en de e-mails',
         'preferences_saved' => 'Voorkeuren opgeslagen.',
         'contact' => 'Wil je iets aan je gegevens laten aanpassen? Neem contact met ons op.',

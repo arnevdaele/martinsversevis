@@ -2,6 +2,7 @@
 
 namespace App\Providers\Filament;
 
+use App\Http\Controllers\Admin\PrintPickingList;
 use App\Support\BackgroundHealth;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
@@ -20,6 +21,7 @@ use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
 use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Session\Middleware\StartSession;
+use Illuminate\Support\Facades\Route;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
 
 class AdminPanelProvider extends PanelProvider
@@ -54,6 +56,10 @@ class AdminPanelProvider extends PanelProvider
                 $problems = auth()->user()?->can('failed-mails.view') ? BackgroundHealth::problems() : [];
 
                 return $problems ? view('filament.background-health', ['problems' => $problems]) : '';
+            })
+            // Paper for the buying and packing, outside the panel layout.
+            ->authenticatedRoutes(function () {
+                Route::get('dagoverzicht/afdrukken', PrintPickingList::class)->name('picking-list.print');
             })
             ->colors([
                 // Sea-blue, matching the portal.
