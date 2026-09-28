@@ -114,6 +114,11 @@ wait instead of failing, retry for up to 12 hours, and give up after 3 real exce
 New mailables/notifications must use the trait. `php artisan app:mail-test you@x`
 sends one directly to check the SMTP settings.
 
+Mails that still fail land in `failed_jobs`, shown under Beheer › Mislukte e-mails
+(`FailedJobResource`, permission `failed-mails.*`) with retry; pruned after 30 days.
+`FailedJob::recipient()` / `order()` read the queued payload, so a new mailable with
+an order or a new notifiable may need a line there, and a name in `FailedJob::TYPES`.
+
 ## Portal front-end
 
 - `lang/{locale}/portal.php` is shared whole as the `t` prop. Never hardcode visible
@@ -148,3 +153,6 @@ vendor/bin/pint
 
 Mail templates are only compiled when rendered — `Mail::fake()` alone would not
 catch a broken Blade file, which is why there are explicit render tests.
+
+GitHub Actions (`.github/workflows/checks.yml`) runs the same three plus `npm run build`
+on every push. Tests need no `.env`: `phpunit.xml` carries a test-only `APP_KEY`.

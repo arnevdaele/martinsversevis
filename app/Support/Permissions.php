@@ -55,6 +55,14 @@ final class Permissions
                     'receive-notifications' => 'E-mail ontvangen bij nieuwe bestellingen',
                 ],
             ],
+            'failed-mails' => [
+                'label' => 'Mislukte e-mails',
+                'abilities' => [
+                    'view' => 'Mislukte e-mails bekijken',
+                    'retry' => 'Mislukte e-mails opnieuw versturen',
+                    'delete' => 'Mislukte e-mails verwijderen',
+                ],
+            ],
             'users' => [
                 'label' => 'Beheerders',
                 'abilities' => $crud('Beheerders'),
